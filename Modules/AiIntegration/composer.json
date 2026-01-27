@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/aiintegration",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\AiIntegration\\": "app/",
+            "Modules\\AiIntegration\\Database\\Factories\\": "database/factories/",
+            "Modules\\AiIntegration\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\AiIntegration\\Tests\\": "tests/"
+        }
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "name": "SocialConnection",
+    "alias": "socialconnection",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\SocialConnection\\Providers\\SocialConnectionServiceProvider"
+    ],
+    "files": []
+}

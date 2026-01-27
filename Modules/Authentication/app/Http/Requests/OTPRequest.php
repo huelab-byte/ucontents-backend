@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Authentication\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class OTPRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     */
+    public function rules(): array
+    {
+        return [
+            'email' => 'required|string|email|exists:users,email',
+            'type' => 'nullable|string|in:login,verification,password_reset',
+        ];
+    }
+}

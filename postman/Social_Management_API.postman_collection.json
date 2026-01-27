@@ -1,0 +1,1292 @@
+{
+	"info": {
+		"_postman_id": "social-management-api",
+		"name": "Social Management API",
+		"description": "Complete API collection for Social Management System - Laravel 12 Modular Monolith",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "social-management"
+	},
+	"item": [
+		{
+			"name": "Core",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "health"]
+						},
+						"description": "Public health check endpoint"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.token) {",
+									"        pm.environment.set('auth_token', response.data.token);",
+									"        pm.environment.set('user_id', response.data.user.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"superadmin@example.com\",\n    \"password\": \"Password123!\",\n    \"remember\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						},
+						"description": "Login with email and password. Returns user data and Sanctum token."
+					},
+					"response": []
+				},
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"Password123!\",\n    \"password_confirmation\": \"Password123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						},
+						"description": "Register a new user account. Email verification required."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "logout"]
+						},
+						"description": "Logout and revoke all tokens"
+					},
+					"response": []
+				},
+				{
+					"name": "Request Magic Link",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"customer@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/magic-link/request",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "magic-link", "request"]
+						},
+						"description": "Request a magic link for passwordless login. Token expires in 15 minutes."
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Magic Link",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{magic_link_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/magic-link/verify",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "magic-link", "verify"]
+						},
+						"description": "Verify magic link token and login. Returns user data and token."
+					},
+					"response": []
+				},
+				{
+					"name": "Request OTP",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"customer@example.com\",\n    \"type\": \"login\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/otp/request",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "otp", "request"]
+						},
+						"description": "Request OTP code. Types: login, verification, password_reset"
+					},
+					"response": []
+				},
+				{
+					"name": "Verify OTP",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"code\": \"123456\",\n    \"email\": \"customer@example.com\",\n    \"type\": \"login\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/otp/verify",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "otp", "verify"]
+						},
+						"description": "Verify OTP code and login. Returns user data and token."
+					},
+					"response": []
+				},
+				{
+					"name": "Request Password Reset",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"customer@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/password/reset/request",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "password", "reset", "request"]
+						},
+						"description": "Request password reset email. Token expires in 60 minutes."
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"customer@example.com\",\n    \"token\": \"{{password_reset_token}}\",\n    \"password\": \"NewPassword123!\",\n    \"password_confirmation\": \"NewPassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/password/reset",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "password", "reset"]
+						},
+						"description": "Reset password using token from email"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Management - Admin",
+			"item": [
+				{
+					"name": "Users",
+					"item": [
+						{
+							"name": "List Users",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/users?per_page=15&search=&role=",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "users"],
+									"query": [
+										{
+											"key": "per_page",
+											"value": "15",
+											"description": "Items per page"
+										},
+										{
+											"key": "search",
+											"value": "",
+											"description": "Search by name or email",
+											"disabled": true
+										},
+										{
+											"key": "role",
+											"value": "",
+											"description": "Filter by role slug",
+											"disabled": true
+										}
+									]
+								},
+								"description": "List all users with pagination. Admin only."
+							},
+							"response": []
+						},
+						{
+							"name": "Get User",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/users/{{user_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "users", "{{user_id}}"]
+								},
+								"description": "Get specific user details with roles and permissions"
+							},
+							"response": []
+						},
+						{
+							"name": "Create User",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"New User\",\n    \"email\": \"newuser@example.com\",\n    \"password\": \"Password123!\",\n    \"roles\": [\"customer\"],\n    \"email_verified\": false\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/users",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "users"]
+								},
+								"description": "Create a new user with optional role assignment"
+							},
+							"response": []
+						},
+						{
+							"name": "Update User",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Updated Name\",\n    \"email\": \"updated@example.com\",\n    \"roles\": [\"admin\", \"customer\"],\n    \"email_verified\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/users/{{user_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "users", "{{user_id}}"]
+								},
+								"description": "Update user information and roles"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete User",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/users/{{user_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "users", "{{user_id}}"]
+								},
+								"description": "Delete a user (soft delete)"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Roles",
+					"item": [
+						{
+							"name": "List Roles",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/roles?per_page=15&search=",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "roles"],
+									"query": [
+										{
+											"key": "per_page",
+											"value": "15"
+										},
+										{
+											"key": "search",
+											"value": "",
+											"disabled": true
+										}
+									]
+								},
+								"description": "List all roles with permissions and user counts"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Role",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/roles/{{role_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "roles", "{{role_id}}"]
+								},
+								"description": "Get specific role with permissions and users"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Role",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Content Manager\",\n    \"slug\": \"content_manager\",\n    \"description\": \"Manages content and media\",\n    \"hierarchy\": 50,\n    \"permissions\": [\"view_users\", \"view_analytics\"]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/roles",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "roles"]
+								},
+								"description": "Create a new role with permissions"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Role",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Updated Role Name\",\n    \"description\": \"Updated description\",\n    \"hierarchy\": 55,\n    \"permissions\": [\"view_users\", \"view_analytics\", \"view_settings\"]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/roles/{{role_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "roles", "{{role_id}}"]
+								},
+								"description": "Update role information and permissions. System roles cannot be modified."
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Role",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/roles/{{role_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "roles", "{{role_id}}"]
+								},
+								"description": "Delete a role. System roles cannot be deleted."
+							},
+							"response": []
+						},
+						{
+							"name": "List Permissions",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/roles/permissions/list",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "roles", "permissions", "list"]
+								},
+								"description": "Get all available permissions in the system"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "User Management - Customer",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/customer/profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "customer", "profile"]
+						},
+						"description": "Get current authenticated user's profile with roles and permissions"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Name\",\n    \"email\": \"newemail@example.com\",\n    \"password\": \"NewPassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/customer/profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "customer", "profile"]
+						},
+						"description": "Update own profile. Cannot change roles."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Client Management - Admin",
+			"item": [
+				{
+					"name": "API Clients",
+					"item": [
+						{
+							"name": "List API Clients",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/clients?per_page=15&environment=&is_active=&search=",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "clients"],
+									"query": [
+										{
+											"key": "per_page",
+											"value": "15"
+										},
+										{
+											"key": "environment",
+											"value": "",
+											"description": "Filter: production, staging, development",
+											"disabled": true
+										},
+										{
+											"key": "is_active",
+											"value": "",
+											"description": "Filter: true/false",
+											"disabled": true
+										},
+										{
+											"key": "search",
+											"value": "",
+											"description": "Search by name",
+											"disabled": true
+										}
+									]
+								},
+								"description": "List all API clients with pagination"
+							},
+							"response": []
+						},
+						{
+							"name": "Get API Client",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/clients/{{api_client_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "clients", "{{api_client_id}}"]
+								},
+								"description": "Get specific API client with keys"
+							},
+							"response": []
+						},
+						{
+							"name": "Create API Client",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Production API Client\",\n    \"description\": \"Main production API client\",\n    \"environment\": \"production\",\n    \"allowed_endpoints\": [\"*\"],\n    \"rate_limit\": {\n        \"limit\": 100,\n        \"period\": 60\n    },\n    \"expires_at\": null\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/clients",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "clients"]
+								},
+								"description": "Create a new API client"
+							},
+							"response": []
+						},
+						{
+							"name": "Update API Client",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Updated Client Name\",\n    \"description\": \"Updated description\",\n    \"is_active\": true,\n    \"allowed_endpoints\": [\"/api/v1/public/*\"],\n    \"rate_limit\": {\n        \"limit\": 200,\n        \"period\": 60\n    }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/clients/{{api_client_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "clients", "{{api_client_id}}"]
+								},
+								"description": "Update API client configuration"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete API Client",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/clients/{{api_client_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "clients", "{{api_client_id}}"]
+								},
+								"description": "Delete an API client (soft delete)"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "API Keys",
+					"item": [
+						{
+							"name": "List API Keys",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/clients/{{api_client_id}}/keys?per_page=15&is_active=",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "clients", "{{api_client_id}}", "keys"],
+									"query": [
+										{
+											"key": "per_page",
+											"value": "15"
+										},
+										{
+											"key": "is_active",
+											"value": "",
+											"description": "Filter: true/false",
+											"disabled": true
+										}
+									]
+								},
+								"description": "List all API keys for a specific client"
+							},
+							"response": []
+						},
+						{
+							"name": "Get API Key",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/clients/{{api_client_id}}/keys/{{api_key_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "clients", "{{api_client_id}}", "keys", "{{api_key_id}}"]
+								},
+								"description": "Get specific API key (secret not shown)"
+							},
+							"response": []
+						},
+						{
+							"name": "Generate API Key",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    if (response.data && response.data.secret_key) {",
+											"        pm.environment.set('api_public_key', response.data.public_key);",
+											"        pm.environment.set('api_secret_key', response.data.secret_key);",
+											"        pm.environment.set('api_key_id', response.data.api_key.id);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Production Key\",\n    \"expires_at\": null\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/clients/{{api_client_id}}/keys",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "clients", "{{api_client_id}}", "keys"]
+								},
+								"description": "Generate a new API key pair. Secret key is only shown once!"
+							},
+							"response": []
+						},
+						{
+							"name": "Revoke API Key",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"reason\": \"Security breach detected\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/clients/{{api_client_id}}/keys/{{api_key_id}}/revoke",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "clients", "{{api_client_id}}", "keys", "{{api_key_id}}", "revoke"]
+								},
+								"description": "Revoke an API key immediately"
+							},
+							"response": []
+						},
+						{
+							"name": "Rotate API Key",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200) {",
+											"    const response = pm.response.json();",
+											"    if (response.data && response.data.secret_key) {",
+											"        pm.environment.set('api_public_key', response.data.public_key);",
+											"        pm.environment.set('api_secret_key', response.data.secret_key);",
+											"        pm.environment.set('api_key_id', response.data.new_api_key.id);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/clients/{{api_client_id}}/keys/{{api_key_id}}/rotate",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "clients", "{{api_client_id}}", "keys", "{{api_key_id}}", "rotate"]
+								},
+								"description": "Rotate API key (create new, revoke old). Secret key only shown once!"
+							},
+							"response": []
+						},
+						{
+							"name": "Get API Key Activity",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{auth_token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/admin/clients/{{api_client_id}}/keys/{{api_key_id}}/activity?per_page=50&from=&to=",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "admin", "clients", "{{api_client_id}}", "keys", "{{api_key_id}}", "activity"],
+									"query": [
+										{
+											"key": "per_page",
+											"value": "50"
+										},
+										{
+											"key": "from",
+											"value": "",
+											"description": "Start date (YYYY-MM-DD)",
+											"disabled": true
+										},
+										{
+											"key": "to",
+											"value": "",
+											"description": "End date (YYYY-MM-DD)",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get activity logs for a specific API key"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "role_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "api_client_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "api_key_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "magic_link_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "password_reset_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "api_public_key",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "api_secret_key",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

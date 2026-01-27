@@ -1,0 +1,11 @@
+{
+    "name": "NotificationManagement",
+    "alias": "notificationmanagement",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\NotificationManagement\\Providers\\NotificationManagementServiceProvider"
+    ],
+    "files": []
+}

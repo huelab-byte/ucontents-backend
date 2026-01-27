@@ -1,0 +1,11 @@
+{
+    "name": "Client",
+    "alias": "client",
+    "description": "Manages API clients and API keys for public API access",
+    "keywords": ["api", "client", "keys", "authentication"],
+    "priority": 0,
+    "providers": [
+        "Modules\\Client\\Providers\\ClientServiceProvider"
+    ],
+    "files": []
+}

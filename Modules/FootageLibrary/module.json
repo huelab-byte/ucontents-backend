@@ -1,0 +1,11 @@
+{
+    "name": "FootageLibrary",
+    "alias": "footagelibrary",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\FootageLibrary\\Providers\\FootageLibraryServiceProvider"
+    ],
+    "files": []
+}

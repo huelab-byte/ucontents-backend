@@ -1,0 +1,11 @@
+{
+    "name": "Authentication",
+    "alias": "authentication",
+    "description": "Handles user authentication including login, registration, password reset, OTP, and social auth",
+    "keywords": ["auth", "login", "register", "otp", "2fa"],
+    "priority": 0,
+    "providers": [
+        "Modules\\Authentication\\Providers\\AuthenticationServiceProvider"
+    ],
+    "files": []
+}

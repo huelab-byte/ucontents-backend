@@ -1,0 +1,11 @@
+{
+    "name": "AudioLibrary",
+    "alias": "audiolibrary",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\AudioLibrary\\Providers\\AudioLibraryServiceProvider"
+    ],
+    "files": []
+}

@@ -1,0 +1,11 @@
+{
+    "name": "AiIntegration",
+    "alias": "aiintegration",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\AiIntegration\\Providers\\AiIntegrationServiceProvider"
+    ],
+    "files": []
+}

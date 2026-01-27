@@ -1,0 +1,17 @@
+{
+    "Core": true,
+    "Client": true,
+    "UserManagement": true,
+    "Authentication": true,
+    "EmailManagement": true,
+    "StorageManagement": true,
+    "GeneralSettings": true,
+    "AiIntegration": true,
+    "PaymentGateway": true,
+    "SocialConnection": true,
+    "NotificationManagement": true,
+    "Support": true,
+    "FootageLibrary": true,
+    "AudioLibrary": true,
+    "ImageLibrary": true
+}

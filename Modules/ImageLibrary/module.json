@@ -1,0 +1,11 @@
+{
+    "name": "ImageLibrary",
+    "alias": "imagelibrary",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\ImageLibrary\\Providers\\ImageLibraryServiceProvider"
+    ],
+    "files": []
+}
