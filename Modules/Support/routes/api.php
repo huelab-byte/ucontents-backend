@@ -17,6 +17,7 @@ Route::prefix('v1')->group(function () {
     // Admin routes
     Route::prefix('admin')
         ->middleware([
+            \Modules\Support\Http\Middleware\AcceptTokenFromQuery::class, // Must run before auth:sanctum
             'auth:sanctum',
             'admin',
             \Modules\Authentication\Http\Middleware\RequireTwoFactorSetup::class,
@@ -56,6 +57,7 @@ Route::prefix('v1')->group(function () {
     // Customer routes
     Route::prefix('customer')
         ->middleware([
+            \Modules\Support\Http\Middleware\AcceptTokenFromQuery::class, // Must run before auth:sanctum
             'auth:sanctum',
             \Modules\Authentication\Http\Middleware\RequireTwoFactorSetup::class,
             'module.feature:Support',

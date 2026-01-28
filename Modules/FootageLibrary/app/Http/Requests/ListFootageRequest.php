@@ -21,7 +21,7 @@ class ListFootageRequest extends FormRequest
         return [
             'user_id' => ['sometimes', 'integer', 'exists:users,id'],
             'folder_id' => ['sometimes', 'nullable', 'integer'],
-            'status' => ['sometimes', 'string', 'in:pending,processing,completed,failed'],
+            'status' => ['sometimes', 'string', 'in:pending,processing,ready,failed'],
             // Orientation can be a string or an array of strings
             'orientation' => ['sometimes'],
             'orientation.*' => ['sometimes', 'string', 'in:horizontal,vertical'],

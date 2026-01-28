@@ -19,6 +19,10 @@ Route::prefix('v1')->group(function () {
                 ->name('admin.audio-library.stats')
                 ->middleware('permission:view_audio_stats');
             
+            Route::get('audio-library/users-with-uploads', [\Modules\AudioLibrary\Http\Controllers\Api\V1\Admin\AudioLibraryController::class, 'usersWithUploads'])
+                ->name('admin.audio-library.users-with-uploads')
+                ->middleware('permission:view_audio_stats');
+            
             Route::get('audio-library/audio', [\Modules\AudioLibrary\Http\Controllers\Api\V1\Admin\AudioLibraryController::class, 'index'])
                 ->name('admin.audio-library.audio')
                 ->middleware('permission:view_all_audio');

@@ -1,0 +1,11 @@
+{
+    "name": "ImageOverlay",
+    "alias": "imageoverlay",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\ImageOverlay\\Providers\\ImageOverlayServiceProvider"
+    ],
+    "files": []
+}

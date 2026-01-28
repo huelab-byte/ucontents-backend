@@ -36,6 +36,20 @@ class LocalStorageDriver implements StorageDriverInterface
         ];
     }
 
+    /**
+     * Upload content directly with exact path (used for migration)
+     * Unlike upload(), this preserves the exact path without generating a new filename
+     */
+    public function putObjectDirect(string $path, string $content, ?string $mimeType = null): array
+    {
+        Storage::disk($this->disk)->put($path, $content);
+        
+        return [
+            'path' => $path,
+            'url' => Storage::disk($this->disk)->url($path),
+        ];
+    }
+
     public function delete(string $path): bool
     {
         return Storage::disk($this->disk)->delete($path);
@@ -119,5 +133,74 @@ class LocalStorageDriver implements StorageDriverInterface
     public function cleanupLocalPath(string $localPath, string $originalPath): void
     {
         // For local storage, no cleanup needed as we return the actual path
+    }
+
+    public function deleteDirectory(string $path): bool
+    {
+        try {
+            $fullPath = Storage::disk($this->disk)->path($path);
+            
+            // Check if directory exists
+            if (!is_dir($fullPath)) {
+                return true; // Already doesn't exist
+            }
+
+            // Use Laravel's deleteDirectory which handles both files and empty directories
+            $deleted = Storage::disk($this->disk)->deleteDirectory($path);
+            
+            // Verify deletion - if directory still exists, try to remove it explicitly
+            // This handles cases where Laravel's deleteDirectory doesn't remove empty directories
+            if (is_dir($fullPath)) {
+                // Check if directory is empty
+                $files = array_diff(scandir($fullPath), ['.', '..']);
+                if (empty($files)) {
+                    // Directory is empty, remove it explicitly
+                    @rmdir($fullPath);
+                    // Verify it's gone
+                    return !is_dir($fullPath);
+                }
+                // Directory still has files, deletion was not successful
+                return false;
+            }
+
+            return $deleted;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    public function deleteMultiple(array $paths): int
+    {
+        $deleted = 0;
+        foreach ($paths as $path) {
+            if ($this->delete($path)) {
+                $deleted++;
+            }
+        }
+        return $deleted;
+    }
+
+    public function getContent(string $path): ?string
+    {
+        try {
+            if (!Storage::disk($this->disk)->exists($path)) {
+                return null;
+            }
+            return Storage::disk($this->disk)->get($path);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    public function getStream(string $path)
+    {
+        try {
+            if (!Storage::disk($this->disk)->exists($path)) {
+                return null;
+            }
+            return Storage::disk($this->disk)->readStream($path);
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 }

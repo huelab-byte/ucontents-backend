@@ -100,4 +100,49 @@ interface StorageDriverInterface
      * @return void
      */
     public function cleanupLocalPath(string $localPath, string $originalPath): void;
+
+    /**
+     * Upload content directly with exact path (used for migration)
+     * Unlike upload(), this preserves the exact path without generating a new filename
+     *
+     * @param string $path Exact destination path
+     * @param string $content File content
+     * @param string|null $mimeType MIME type
+     * @return array ['path' => string, 'url' => string|null]
+     */
+    public function putObjectDirect(string $path, string $content, ?string $mimeType = null): array;
+
+    /**
+     * Delete a directory and all its contents
+     * For local storage: removes the directory
+     * For S3: deletes all objects with the prefix
+     *
+     * @param string $path Directory path/prefix
+     * @return bool
+     */
+    public function deleteDirectory(string $path): bool;
+
+    /**
+     * Delete multiple files at once
+     *
+     * @param array $paths Array of file paths
+     * @return int Number of files successfully deleted
+     */
+    public function deleteMultiple(array $paths): int;
+
+    /**
+     * Get file content as string
+     *
+     * @param string $path File path
+     * @return string|null File content or null if not found
+     */
+    public function getContent(string $path): ?string;
+
+    /**
+     * Get a stream resource for the file
+     *
+     * @param string $path File path
+     * @return resource|null Stream resource or null if not found
+     */
+    public function getStream(string $path);
 }

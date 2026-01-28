@@ -63,6 +63,11 @@ Route::prefix('v1')->group(function () {
             Route::post('storage/upload', [FileUploadController::class, 'upload'])
                 ->name('admin.storage.upload')
                 ->middleware('permission:upload_files|manage_storage_config');
+            
+            // Admin file download
+            Route::get('storage/files/{id}/download', [FileUploadController::class, 'download'])
+                ->name('admin.storage.download')
+                ->middleware('permission:upload_files|manage_storage_config');
         });
 
     // Customer routes
@@ -79,5 +84,8 @@ Route::prefix('v1')->group(function () {
             Route::post('storage/bulk-upload', [FileUploadController::class, 'bulkUpload'])
                 ->name('customer.storage.bulk-upload')
                 ->middleware('permission:bulk_upload_files|upload_files');
+            Route::get('storage/files/{id}/download', [FileUploadController::class, 'download'])
+                ->name('customer.storage.download')
+                ->middleware('permission:upload_files');
         });
 });

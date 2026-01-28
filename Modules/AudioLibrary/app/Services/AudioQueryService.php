@@ -50,6 +50,7 @@ class AudioQueryService
             'pending_audio' => Audio::where('status', 'pending')->count(),
             'failed_audio' => Audio::where('status', 'failed')->count(),
             'total_size' => $this->calculateTotalSize(),
+            'total_users_with_uploads' => Audio::distinct('user_id')->count('user_id'),
         ];
     }
 
@@ -95,5 +96,37 @@ class AudioQueryService
         return Audio::with('storageFile')
             ->get()
             ->sum(fn($audio) => $audio->storageFile?->size ?? 0);
+    }
+
+    /**
+     * Get users with their audio upload counts
+     */
+    public function getUsersWithUploadCounts(): array
+    {
+        $userIds = Audio::select('user_id')
+            ->selectRaw('COUNT(*) as upload_count')
+            ->groupBy('user_id')
+            ->orderByDesc('upload_count')
+            ->get();
+
+        // Load users separately
+        $userIdsArray = $userIds->pluck('user_id')->toArray();
+        $users = \Modules\UserManagement\Models\User::whereIn('id', $userIdsArray)
+            ->select('id', 'name', 'email')
+            ->get()
+            ->keyBy('id');
+
+        return $userIds->map(function ($item) use ($users) {
+            $user = $users->get($item->user_id);
+            return [
+                'user_id' => $item->user_id,
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ] : null,
+                'upload_count' => (int) $item->upload_count,
+            ];
+        })->toArray();
     }
 }

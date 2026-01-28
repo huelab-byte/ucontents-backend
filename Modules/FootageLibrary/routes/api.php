@@ -19,6 +19,10 @@ Route::prefix('v1')->group(function () {
                 ->name('admin.footage-library.stats')
                 ->middleware('permission:view_footage_stats');
             
+            Route::get('footage-library/users-with-uploads', [\Modules\FootageLibrary\Http\Controllers\Api\V1\Admin\FootageLibraryController::class, 'usersWithUploads'])
+                ->name('admin.footage-library.users-with-uploads')
+                ->middleware('permission:view_footage_stats');
+            
             Route::get('footage-library/footage', [\Modules\FootageLibrary\Http\Controllers\Api\V1\Admin\FootageLibraryController::class, 'index'])
                 ->name('admin.footage-library.footage')
                 ->middleware('permission:view_all_footage');

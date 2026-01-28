@@ -1,0 +1,11 @@
+{
+    "name": "BgmLibrary",
+    "alias": "bgmlibrary",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\BgmLibrary\\Providers\\BgmLibraryServiceProvider"
+    ],
+    "files": []
+}

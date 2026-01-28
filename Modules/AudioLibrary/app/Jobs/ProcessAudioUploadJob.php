@@ -38,8 +38,8 @@ class ProcessAudioUploadJob implements ShouldQueue
         try {
             $queueItem->markAsProcessing();
 
-            // Get the temp file
-            $tempPath = Storage::path($queueItem->file_path);
+            // Get the temp file from local disk (temp files are always on local disk)
+            $tempPath = Storage::disk('local')->path($queueItem->file_path);
             
             if (!file_exists($tempPath)) {
                 throw new \Exception('Temporary file not found');
@@ -69,8 +69,8 @@ class ProcessAudioUploadJob implements ShouldQueue
             // Mark as completed
             $queueItem->markAsCompleted($audio->id);
 
-            // Cleanup temp file
-            Storage::delete($queueItem->file_path);
+            // Cleanup temp file from local disk
+            Storage::disk('local')->delete($queueItem->file_path);
 
             Log::info('Audio upload processed successfully', [
                 'queue_id' => $this->queueId,
@@ -84,9 +84,9 @@ class ProcessAudioUploadJob implements ShouldQueue
 
             $queueItem->markAsFailed($e->getMessage());
 
-            // Cleanup temp file on failure
+            // Cleanup temp file on failure from local disk
             if (isset($queueItem->file_path)) {
-                Storage::delete($queueItem->file_path);
+                Storage::disk('local')->delete($queueItem->file_path);
             }
 
             throw $e;

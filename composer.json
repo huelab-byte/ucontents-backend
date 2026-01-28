@@ -59,6 +59,9 @@
             "Modules\\FootageLibrary\\": "Modules/FootageLibrary/app/",
             "Modules\\AudioLibrary\\": "Modules/AudioLibrary/app/",
             "Modules\\ImageLibrary\\": "Modules/ImageLibrary/app/",
+            "Modules\\VideoOverlay\\": "Modules/VideoOverlay/app/",
+            "Modules\\BgmLibrary\\": "Modules/BgmLibrary/app/",
+            "Modules\\ImageOverlay\\": "Modules/ImageOverlay/app/",
             "Modules\\": "Modules/"
         },
         "files": [
@@ -94,7 +97,13 @@
             "Modules/AudioLibrary/app/Providers/AudioLibraryServiceProvider.php",
             "Modules/AudioLibrary/app/Providers/RouteServiceProvider.php",
             "Modules/ImageLibrary/app/Providers/ImageLibraryServiceProvider.php",
-            "Modules/ImageLibrary/app/Providers/RouteServiceProvider.php"
+            "Modules/ImageLibrary/app/Providers/RouteServiceProvider.php",
+            "Modules/VideoOverlay/app/Providers/VideoOverlayServiceProvider.php",
+            "Modules/VideoOverlay/app/Providers/RouteServiceProvider.php",
+            "Modules/BgmLibrary/app/Providers/BgmLibraryServiceProvider.php",
+            "Modules/BgmLibrary/app/Providers/RouteServiceProvider.php",
+            "Modules/ImageOverlay/app/Providers/ImageOverlayServiceProvider.php",
+            "Modules/ImageOverlay/app/Providers/RouteServiceProvider.php"
         ]
     },
     "autoload-dev": {

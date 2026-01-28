@@ -23,15 +23,16 @@ class StoreStorageConfigRequest extends FormRequest
     {
         return [
             'driver' => 'required|string|in:local,do_s3,aws_s3,contabo_s3,cloudflare_r2,backblaze_b2',
-            'name' => 'required|string|max:255',
             'is_active' => 'nullable|boolean',
-            'config' => 'required|array',
-            'config.key' => 'required_unless:driver,local|string',
-            'config.secret' => 'required_unless:driver,local|string',
-            'config.region' => 'required_unless:driver,local|string',
-            'config.bucket' => 'required_unless:driver,local|string',
-            'config.endpoint' => 'nullable|string|url',
-            'config.path' => 'nullable|string',
+            'key' => 'required_unless:driver,local|string',
+            'secret' => 'required_unless:driver,local|string',
+            'region' => 'required_unless:driver,local|string',
+            'bucket' => 'required_unless:driver,local|string',
+            'endpoint' => 'nullable|string|url',
+            'url' => 'nullable|string|url',
+            'use_path_style_endpoint' => 'nullable|boolean',
+            'root_path' => 'nullable|string',
+            'metadata' => 'nullable|array',
         ];
     }
 }

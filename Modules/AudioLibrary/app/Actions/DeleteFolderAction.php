@@ -6,10 +6,9 @@ namespace Modules\AudioLibrary\Actions;
 
 use Modules\AudioLibrary\Models\AudioFolder;
 use Modules\AudioLibrary\Models\Audio;
+use Modules\StorageManagement\Factories\StorageDriverFactory;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Storage;
 
 class DeleteFolderAction
 {
@@ -143,6 +142,7 @@ class DeleteFolderAction
 
     /**
      * Delete storage directory for a folder
+     * Uses StorageManagement module to handle both local and remote storage
      */
     private function deleteStorageDirectory(?string $folderPath, array &$stats): void
     {
@@ -153,22 +153,37 @@ class DeleteFolderAction
         try {
             $storagePath = 'audio-library/' . $folderPath;
             
-            // Use Laravel's Storage facade to delete directory
-            // This works for both local and S3 storage
-            if (Storage::disk('public')->exists($storagePath)) {
-                Storage::disk('public')->deleteDirectory($storagePath);
-                $stats['storage_dirs_deleted']++;
-                
-                Log::debug('Storage directory deleted', ['path' => $storagePath]);
-            } else {
-                // Try direct filesystem path for local storage
-                $fullPath = storage_path('app/public/' . $storagePath);
-                if (File::isDirectory($fullPath)) {
-                    File::deleteDirectory($fullPath);
+            // Use StorageManagement driver to delete directory
+            // This works for both local storage and S3-compatible providers
+            $driver = StorageDriverFactory::make();
+            
+            if ($driver->deleteDirectory($storagePath)) {
+                // Verify deletion was successful by checking if directory still exists
+                // This ensures empty directories are properly removed
+                $files = $driver->listFiles($storagePath, false);
+                if (empty($files)) {
                     $stats['storage_dirs_deleted']++;
-                    
-                    Log::debug('Storage directory deleted (direct)', ['path' => $fullPath]);
+                    Log::debug('Storage directory deleted and verified via StorageManagement', ['path' => $storagePath]);
+                } else {
+                    // Directory still has files, deletion was not fully successful
+                    $stats['errors'][] = [
+                        'type' => 'storage_directory',
+                        'path' => $folderPath,
+                        'error' => 'Directory deletion incomplete - files still remain',
+                    ];
+                    Log::warning('Storage directory deletion incomplete', [
+                        'path' => $storagePath,
+                        'remaining_files' => count($files),
+                    ]);
                 }
+            } else {
+                // deleteDirectory returned false
+                $stats['errors'][] = [
+                    'type' => 'storage_directory',
+                    'path' => $folderPath,
+                    'error' => 'deleteDirectory returned false',
+                ];
+                Log::warning('Storage directory deletion failed', ['path' => $storagePath]);
             }
         } catch (\Exception $e) {
             // Log but don't fail - directory might not exist or be empty already

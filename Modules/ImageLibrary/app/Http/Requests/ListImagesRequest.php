@@ -21,7 +21,7 @@ class ListImagesRequest extends FormRequest
         return [
             'user_id' => ['sometimes', 'integer', 'exists:users,id'],
             'folder_id' => ['sometimes', 'nullable', 'integer'],
-            'status' => ['sometimes', 'string', 'in:pending,processing,completed,failed'],
+            'status' => ['sometimes', 'string', 'in:pending,processing,ready,failed'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'page' => ['sometimes', 'integer', 'min:1'],
         ];

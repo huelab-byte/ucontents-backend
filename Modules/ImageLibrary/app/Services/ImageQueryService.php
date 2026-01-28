@@ -78,6 +78,11 @@ class ImageQueryService
         $totalSize = $sizeQuery->join('storage_files', 'images.storage_file_id', '=', 'storage_files.id')
             ->sum('storage_files.size');
 
+        $baseQuery = Image::query();
+        if ($userId) {
+            $baseQuery->where('user_id', $userId);
+        }
+
         return [
             'total_image' => (int) $stats->total_image,
             'ready_image' => (int) $stats->ready_image,
@@ -85,6 +90,39 @@ class ImageQueryService
             'pending_image' => (int) $stats->pending_image,
             'failed_image' => (int) $stats->failed_image,
             'total_size' => (int) $totalSize,
+            'total_users_with_uploads' => $userId ? 1 : Image::distinct('user_id')->count('user_id'),
         ];
+    }
+
+    /**
+     * Get users with their image upload counts
+     */
+    public function getUsersWithUploadCounts(): array
+    {
+        $userIds = Image::select('user_id')
+            ->selectRaw('COUNT(*) as upload_count')
+            ->groupBy('user_id')
+            ->orderByDesc('upload_count')
+            ->get();
+
+        // Load users separately
+        $userIdsArray = $userIds->pluck('user_id')->toArray();
+        $users = \Modules\UserManagement\Models\User::whereIn('id', $userIdsArray)
+            ->select('id', 'name', 'email')
+            ->get()
+            ->keyBy('id');
+
+        return $userIds->map(function ($item) use ($users) {
+            $user = $users->get($item->user_id);
+            return [
+                'user_id' => $item->user_id,
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ] : null,
+                'upload_count' => (int) $item->upload_count,
+            ];
+        })->toArray();
     }
 }

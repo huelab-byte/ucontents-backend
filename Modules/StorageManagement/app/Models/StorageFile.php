@@ -85,4 +85,47 @@ class StorageFile extends Model
         $driver = StorageDriverFactory::make($this->driver);
         $driver->cleanupLocalPath($localPath, $this->path);
     }
+
+    /**
+     * Get file content as string
+     *
+     * @return string|null File content or null if not found
+     */
+    public function getContent(): ?string
+    {
+        $driver = StorageDriverFactory::make($this->driver);
+        return $driver->getContent($this->path);
+    }
+
+    /**
+     * Get a stream resource for the file
+     *
+     * @return resource|null Stream resource or null if not found
+     */
+    public function getStream()
+    {
+        $driver = StorageDriverFactory::make($this->driver);
+        return $driver->getStream($this->path);
+    }
+
+    /**
+     * Check if the file exists in storage
+     *
+     * @return bool
+     */
+    public function existsInStorage(): bool
+    {
+        $driver = StorageDriverFactory::make($this->driver);
+        return $driver->exists($this->path);
+    }
+
+    /**
+     * Get the storage driver instance
+     *
+     * @return \Modules\StorageManagement\Contracts\StorageDriverInterface
+     */
+    public function getDriver()
+    {
+        return StorageDriverFactory::make($this->driver);
+    }
 }

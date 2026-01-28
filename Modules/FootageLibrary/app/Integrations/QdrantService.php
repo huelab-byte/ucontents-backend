@@ -91,6 +91,34 @@ class QdrantService
     public function storePoint(int|string $pointId, array $vector, array $payload): bool
     {
         try {
+            // Validate vector before storing
+            if (empty($vector)) {
+                Log::error('Cannot store empty vector in Qdrant', ['point_id' => $pointId]);
+                throw new \InvalidArgumentException('Vector cannot be empty');
+            }
+
+            $vectorSize = count($vector);
+            if ($vectorSize !== $this->vectorSize) {
+                Log::error('Vector size mismatch', [
+                    'point_id' => $pointId,
+                    'expected' => $this->vectorSize,
+                    'actual' => $vectorSize,
+                ]);
+                throw new \InvalidArgumentException("Vector size mismatch: expected {$this->vectorSize}, got {$vectorSize}");
+            }
+
+            // Validate all vector values are numeric
+            foreach ($vector as $i => $value) {
+                if (!is_numeric($value)) {
+                    Log::error('Vector contains non-numeric value', [
+                        'point_id' => $pointId,
+                        'index' => $i,
+                        'value' => $value,
+                    ]);
+                    throw new \InvalidArgumentException("Vector contains non-numeric value at index {$i}");
+                }
+            }
+
             // Ensure point ID is numeric (Qdrant prefers unsigned 64-bit integers)
             $numericPointId = is_numeric($pointId) ? (int) $pointId : crc32($pointId);
             
@@ -98,7 +126,7 @@ class QdrantService
                 'points' => [
                     [
                         'id' => $numericPointId,
-                        'vector' => $vector,
+                        'vector' => array_map('floatval', $vector), // Ensure all values are floats
                         'payload' => $payload,
                     ],
                 ],
@@ -107,7 +135,7 @@ class QdrantService
             Log::debug('Storing point in Qdrant', [
                 'collection' => $this->collectionName,
                 'point_id' => $numericPointId,
-                'vector_size' => count($vector),
+                'vector_size' => $vectorSize,
             ]);
 
             $response = $this->makeRequest('PUT', "/collections/{$this->collectionName}/points", $data);
@@ -125,7 +153,7 @@ class QdrantService
                 'point_id' => $pointId,
                 'error' => $e->getMessage(),
             ]);
-            return false;
+            throw $e; // Re-throw to ensure caller knows about the failure
         }
     }
 
@@ -186,6 +214,92 @@ class QdrantService
                 'point_id' => $pointId,
                 'error' => $e->getMessage(),
             ]);
+            return false;
+        }
+    }
+
+    /**
+     * Delete collection and all its points
+     */
+    public function deleteCollection(): bool
+    {
+        try {
+            $response = $this->makeRequest('DELETE', "/collections/{$this->collectionName}");
+            
+            if ($response->successful()) {
+                Log::info('Qdrant collection deleted', ['collection' => $this->collectionName]);
+                return true;
+            }
+
+            Log::error('Qdrant collection deletion failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+            return false;
+        } catch (\Exception $e) {
+            Log::error('Qdrant collection deletion error', ['error' => $e->getMessage()]);
+            return false;
+        }
+    }
+
+    /**
+     * Get collection info
+     */
+    public function getCollectionInfo(): ?array
+    {
+        try {
+            $response = $this->makeRequest('GET', "/collections/{$this->collectionName}");
+            
+            if ($response->successful()) {
+                return $response->json('result', []);
+            }
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Qdrant get collection info error', ['error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    /**
+     * Get all point IDs in collection
+     */
+    public function getAllPointIds(int $limit = 10000): array
+    {
+        try {
+            $response = $this->makeRequest('POST', "/collections/{$this->collectionName}/points/scroll", [
+                'limit' => $limit,
+                'with_payload' => false,
+                'with_vector' => false,
+            ]);
+            
+            if ($response->successful()) {
+                $points = $response->json('result.points', []);
+                return array_column($points, 'id');
+            }
+            return [];
+        } catch (\Exception $e) {
+            Log::error('Qdrant get all point IDs error', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * Delete multiple points by IDs
+     */
+    public function deletePoints(array $pointIds): bool
+    {
+        if (empty($pointIds)) {
+            return true;
+        }
+
+        try {
+            $response = $this->makeRequest('POST', "/collections/{$this->collectionName}/points/delete", [
+                'points' => array_map('intval', $pointIds),
+            ]);
+            
+            return $response->successful();
+        } catch (\Exception $e) {
+            Log::error('Qdrant delete points failed', ['error' => $e->getMessage()]);
             return false;
         }
     }

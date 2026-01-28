@@ -23,15 +23,16 @@ class UpdateStorageConfigRequest extends FormRequest
     {
         return [
             'driver' => 'sometimes|string|in:local,do_s3,aws_s3,contabo_s3,cloudflare_r2,backblaze_b2',
-            'name' => 'sometimes|string|max:255',
             'is_active' => 'nullable|boolean',
-            'config' => 'sometimes|array',
-            'config.key' => 'sometimes|string',
-            'config.secret' => 'sometimes|string',
-            'config.region' => 'sometimes|string',
-            'config.bucket' => 'sometimes|string',
-            'config.endpoint' => 'nullable|string|url',
-            'config.path' => 'nullable|string',
+            'key' => 'sometimes|string',
+            'secret' => 'sometimes|string',
+            'region' => 'sometimes|string',
+            'bucket' => 'sometimes|string',
+            'endpoint' => 'nullable|string|url',
+            'url' => 'nullable|string|url',
+            'use_path_style_endpoint' => 'nullable|boolean',
+            'root_path' => 'nullable|string',
+            'metadata' => 'nullable|array',
         ];
     }
 }

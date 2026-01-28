@@ -24,12 +24,21 @@ class StorageDriverFactory
      */
     public static function make(?string $driver = null, ?array $config = null): StorageDriverInterface
     {
-        if ($driver === null || $config === null) {
+        // If no driver specified, use active storage config
+        if ($driver === null) {
             $setting = StorageSetting::getActive();
             if (!$setting) {
                 throw new \RuntimeException('No active storage configuration found');
             }
             $driver = $setting->driver;
+            $config = $setting->toArray();
+        }
+        // If driver specified but no config, look up config for that driver
+        elseif ($config === null) {
+            $setting = StorageSetting::where('driver', $driver)->first();
+            if (!$setting) {
+                throw new \RuntimeException("No storage configuration found for driver: {$driver}");
+            }
             $config = $setting->toArray();
         }
 

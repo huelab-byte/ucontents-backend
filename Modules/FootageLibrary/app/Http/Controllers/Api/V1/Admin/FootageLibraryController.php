@@ -61,4 +61,16 @@ class FootageLibraryController extends BaseApiController
             return $this->error('Delete failed: ' . $e->getMessage(), 500);
         }
     }
+
+    /**
+     * Get users with their footage upload counts
+     */
+    public function usersWithUploads(): JsonResponse
+    {
+        $this->authorize('viewAny', Footage::class);
+
+        $users = $this->queryService->getUsersWithUploadCounts();
+
+        return $this->success($users, 'Users with upload counts retrieved successfully');
+    }
 }

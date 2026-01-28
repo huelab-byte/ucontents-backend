@@ -59,7 +59,9 @@ class FootageLibraryServiceProvider extends ServiceProvider
      */
     protected function registerCommands(): void
     {
-        // $this->commands([]);
+        $this->commands([
+            \Modules\FootageLibrary\Console\Commands\RebuildQdrantCollection::class,
+        ]);
     }
 
     /**

@@ -40,7 +40,8 @@ class SupportTicketController extends BaseApiController
             'search' => $validated['search'] ?? null,
         ], fn($v) => $v !== null);
 
-        $tickets = $this->queryService->listForUserWithFilters(auth()->id(), $filters, $validated['per_page'] ?? 15);
+        $perPage = isset($validated['per_page']) ? (int) $validated['per_page'] : 15;
+        $tickets = $this->queryService->listForUserWithFilters(auth()->id(), $filters, $perPage);
 
         return $this->paginatedResource($tickets, SupportTicketResource::class, 'Tickets retrieved successfully');
     }

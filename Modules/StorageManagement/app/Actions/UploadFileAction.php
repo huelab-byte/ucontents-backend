@@ -19,13 +19,12 @@ class UploadFileAction
     ): StorageFile {
         $driver = StorageDriverFactory::make();
         
-        // Generate path if not provided
-        if (!$path) {
-            $path = date('Y/m/d') . '/' . Str::random(40) . '.' . $file->getClientOriginalExtension();
-        }
+        // Path is treated as directory - each driver handles filename generation
+        // If no path provided, use date-based directory structure
+        $directory = $path ? rtrim($path, '/') : date('Y/m/d');
 
-        // Upload file
-        $result = $driver->upload($file, $path);
+        // Upload file - driver will generate unique filename
+        $result = $driver->upload($file, $directory);
 
         // Get active storage setting to determine driver
         $activeSetting = \Modules\StorageManagement\Models\StorageSetting::getActive();

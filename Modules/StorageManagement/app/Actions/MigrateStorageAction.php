@@ -17,73 +17,106 @@ class MigrateStorageAction
         $sourceDriver = StorageDriverFactory::make($sourceSetting->driver, $sourceSetting->toArray());
         $destinationDriver = StorageDriverFactory::make($destinationSetting->driver, $destinationSetting->toArray());
 
-        // Get all files from database
+        // Get all files from database that belong to the source storage
         $files = StorageFile::where('driver', $sourceSetting->driver)->get();
         
         $migrated = 0;
         $failed = 0;
+        $skipped = 0;
         $errors = [];
 
-        DB::beginTransaction();
-        try {
-            foreach ($files as $file) {
+        foreach ($files as $file) {
+            $localPath = null;
+            
+            try {
+                // Check if file exists in source
+                if (!$sourceDriver->exists($file->path)) {
+                    Log::warning("File not found in source storage, skipping", [
+                        'file_id' => $file->id,
+                        'path' => $file->path,
+                    ]);
+                    $skipped++;
+                    continue;
+                }
+
+                // Download file from source to local temp
+                $localPath = $sourceDriver->getLocalPath($file->path);
+                
+                if (!file_exists($localPath)) {
+                    throw new \Exception("Failed to download file from source storage");
+                }
+
+                // Upload to destination using uploadFile method (preserves exact path)
+                $destinationPath = $file->path; // Keep same path structure
+                $this->uploadToDestination($destinationDriver, $localPath, $destinationPath, $file->mime_type);
+
+                // Update file record in database
+                DB::beginTransaction();
                 try {
-                    // Check if file exists in source
-                    if (!$sourceDriver->exists($file->path)) {
-                        Log::warning("File not found in source storage: {$file->path}");
-                        $failed++;
-                        continue;
-                    }
-
-                    // Copy file to destination
-                    $destinationPath = $file->path; // Keep same path structure
-                    if (!$destinationDriver->copy($file->path, $destinationPath)) {
-                        // If copy doesn't work, try upload
-                        $sourceContent = $sourceDriver->exists($file->path) 
-                            ? file_get_contents($sourceDriver->url($file->path) ?? '')
-                            : null;
-                        
-                        if ($sourceContent) {
-                            $tempFile = tempnam(sys_get_temp_dir(), 'migrate_');
-                            file_put_contents($tempFile, $sourceContent);
-                            $destinationDriver->upload($tempFile, $destinationPath);
-                            unlink($tempFile);
-                        } else {
-                            throw new \Exception("Could not read source file");
-                        }
-                    }
-
-                    // Update file record
                     $file->update([
                         'driver' => $destinationSetting->driver,
                         'url' => $destinationDriver->url($destinationPath),
                     ]);
-
-                    $migrated++;
+                    DB::commit();
                 } catch (\Exception $e) {
-                    $failed++;
-                    $errors[] = [
-                        'file_id' => $file->id,
-                        'path' => $file->path,
-                        'error' => $e->getMessage(),
-                    ];
-                    Log::error("Failed to migrate file: {$file->path}", [
-                        'error' => $e->getMessage(),
-                    ]);
+                    DB::rollBack();
+                    throw $e;
+                }
+
+                // Optionally delete from source after successful migration
+                // Uncomment the following line to delete source files after migration:
+                // $sourceDriver->delete($file->path);
+
+                $migrated++;
+                
+                Log::info("File migrated successfully", [
+                    'file_id' => $file->id,
+                    'path' => $file->path,
+                    'from' => $sourceSetting->driver,
+                    'to' => $destinationSetting->driver,
+                ]);
+
+            } catch (\Exception $e) {
+                $failed++;
+                $errors[] = [
+                    'file_id' => $file->id,
+                    'path' => $file->path,
+                    'error' => $e->getMessage(),
+                ];
+                Log::error("Failed to migrate file", [
+                    'file_id' => $file->id,
+                    'path' => $file->path,
+                    'error' => $e->getMessage(),
+                ]);
+            } finally {
+                // Clean up temp file
+                if ($localPath) {
+                    $sourceDriver->cleanupLocalPath($localPath, $file->path);
                 }
             }
-
-            DB::commit();
-
-            return [
-                'migrated' => $migrated,
-                'failed' => $failed,
-                'total' => $files->count(),
-                'errors' => $errors,
-            ];
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
         }
+
+        return [
+            'migrated' => $migrated,
+            'failed' => $failed,
+            'skipped' => $skipped,
+            'total' => $files->count(),
+            'errors' => $errors,
+        ];
+    }
+
+    /**
+     * Upload file to destination storage preserving exact path
+     */
+    private function uploadToDestination($driver, string $localFilePath, string $destinationPath, ?string $mimeType = null): void
+    {
+        $content = file_get_contents($localFilePath);
+        if ($content === false) {
+            throw new \Exception("Could not read local file: {$localFilePath}");
+        }
+
+        // Use putObjectDirect which all drivers implement
+        // This preserves the exact path without generating a new filename
+        $driver->putObjectDirect($destinationPath, $content, $mimeType);
     }
 }

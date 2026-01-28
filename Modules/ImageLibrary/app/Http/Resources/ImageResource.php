@@ -17,6 +17,13 @@ class ImageResource extends JsonResource
             'status' => $this->status,
             'folder_id' => $this->folder_id,
             'user_id' => $this->user_id,
+            'user' => $this->whenLoaded('user', function () {
+                return [
+                    'id' => $this->user->id,
+                    'name' => $this->user->name,
+                    'email' => $this->user->email,
+                ];
+            }),
             'storage_file' => $this->whenLoaded('storageFile', function () {
                 return [
                     'id' => $this->storageFile->id,

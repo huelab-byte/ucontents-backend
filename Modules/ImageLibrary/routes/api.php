@@ -19,6 +19,10 @@ Route::prefix('v1')->group(function () {
                 ->name('admin.image-library.stats')
                 ->middleware('permission:view_image_stats');
             
+            Route::get('image-library/users-with-uploads', [\Modules\ImageLibrary\Http\Controllers\Api\V1\Admin\ImageLibraryController::class, 'usersWithUploads'])
+                ->name('admin.image-library.users-with-uploads')
+                ->middleware('permission:view_image_stats');
+            
             Route::get('image-library/images', [\Modules\ImageLibrary\Http\Controllers\Api\V1\Admin\ImageLibraryController::class, 'index'])
                 ->name('admin.image-library.images')
                 ->middleware('permission:view_all_image');

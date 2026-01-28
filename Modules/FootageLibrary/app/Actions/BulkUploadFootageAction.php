@@ -26,8 +26,9 @@ class BulkUploadFootageAction
 
         foreach ($files as $file) {
             try {
-                // Store file temporarily
-                $tempPath = $file->store('temp/footage-uploads');
+                // Store file temporarily in local disk (not the active storage provider)
+                // Temp files are processed locally before being uploaded to final destination
+                $tempPath = $file->store('temp/footage-uploads', 'local');
                 
                 // Create queue entry
                 $queueItem = FootageUploadQueue::create([

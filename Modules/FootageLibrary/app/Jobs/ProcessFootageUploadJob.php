@@ -37,13 +37,13 @@ class ProcessFootageUploadJob implements ShouldQueue
         try {
             $queueItem->markAsProcessing();
 
-            // Get file from temporary storage
-            if (!Storage::exists($queueItem->file_path)) {
+            // Get file from temporary local storage (temp files are always on local disk)
+            if (!Storage::disk('local')->exists($queueItem->file_path)) {
                 throw new \Exception('Temporary file not found');
             }
 
             // Read file content and create temporary file for upload
-            $content = Storage::get($queueItem->file_path);
+            $content = Storage::disk('local')->get($queueItem->file_path);
             $tempFile = tempnam(sys_get_temp_dir(), 'footage_upload_');
             file_put_contents($tempFile, $content);
             
@@ -70,8 +70,8 @@ class ProcessFootageUploadJob implements ShouldQueue
 
             $queueItem->updateProgress(60);
 
-            // Clean up temporary files
-            Storage::delete($queueItem->file_path);
+            // Clean up temporary files from local disk
+            Storage::disk('local')->delete($queueItem->file_path);
             if (file_exists($tempFile)) {
                 unlink($tempFile);
             }

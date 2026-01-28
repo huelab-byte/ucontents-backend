@@ -1,0 +1,11 @@
+{
+    "name": "VideoOverlay",
+    "alias": "videooverlay",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\VideoOverlay\\Providers\\VideoOverlayServiceProvider"
+    ],
+    "files": []
+}

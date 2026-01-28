@@ -106,6 +106,8 @@ class StoreEmbeddingAction
             'embedding_model' => env('FOOTAGE_EMBEDDING_MODEL', 'text-embedding-ada-002'),
         ]);
         
+        $expectedSize = config('footagelibrary.module.qdrant.vector_size', 1536);
+        
         // Use OpenAI embeddings API
         // Note: This requires the AiIntegration module to support embeddings
         // For now, we'll use a workaround with the model call service
@@ -123,14 +125,31 @@ class StoreEmbeddingAction
         
         // Extract embedding from response
         // This depends on how the AI adapter returns embeddings
-        if (isset($response['embedding'])) {
-            return $response['embedding'];
-        }
+        $embedding = null;
         
-        if (isset($response['data'][0]['embedding'])) {
-            return $response['data'][0]['embedding'];
+        if (isset($response['embedding']) && is_array($response['embedding'])) {
+            $embedding = $response['embedding'];
+        } elseif (isset($response['data'][0]['embedding']) && is_array($response['data'][0]['embedding'])) {
+            $embedding = $response['data'][0]['embedding'];
         }
 
-        throw new \RuntimeException('Could not extract embedding from AI response');
+        // Validate embedding
+        if ($embedding === null || empty($embedding)) {
+            Log::error('Empty embedding received from AI', [
+                'response_keys' => array_keys($response ?? []),
+            ]);
+            throw new \RuntimeException('Empty embedding received from AI response');
+        }
+
+        $actualSize = count($embedding);
+        if ($actualSize !== $expectedSize) {
+            Log::error('Embedding size mismatch', [
+                'expected' => $expectedSize,
+                'actual' => $actualSize,
+            ]);
+            throw new \RuntimeException("Embedding size mismatch: expected {$expectedSize}, got {$actualSize}");
+        }
+
+        return $embedding;
     }
 }

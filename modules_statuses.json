@@ -13,5 +13,8 @@
     "Support": true,
     "FootageLibrary": true,
     "AudioLibrary": true,
-    "ImageLibrary": true
+    "ImageLibrary": true,
+    "VideoOverlay": true,
+    "BgmLibrary": true,
+    "ImageOverlay": true
 }
