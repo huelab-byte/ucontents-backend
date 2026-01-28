@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('refund_number')->unique();
             $table->foreignId('payment_id')->constrained('payments')->cascadeOnDelete();
             $table->foreignId('invoice_id')->nullable()->constrained('invoices')->nullOnDelete();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id');
             $table->foreignId('payment_gateway_id')->nullable()->constrained('payment_gateways')->nullOnDelete();
             $table->decimal('amount', 15, 2);
             $table->string('currency', 3)->default('USD');
@@ -29,7 +29,7 @@ return new class extends Migration
             $table->json('metadata')->nullable(); // Additional refund data
             $table->timestamp('processed_at')->nullable();
             $table->text('failure_reason')->nullable();
-            $table->foreignId('processed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('processed_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -40,6 +40,14 @@ return new class extends Migration
             $table->index('status');
             $table->index('gateway_refund_id');
         });
+
+        // Add foreign keys to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('refunds', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+                $table->foreign('processed_by')->references('id')->on('users')->nullOnDelete();
+            });
+        }
     }
 
     /**

@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('subscriptions', function (Blueprint $table) {
             $table->id();
             $table->string('subscription_number')->unique();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id');
             $table->morphs('subscriptionable'); // For packages, services, etc.
             $table->string('name'); // Subscription name
             $table->enum('interval', ['weekly', 'monthly', 'yearly']);
@@ -40,6 +40,13 @@ return new class extends Migration
             $table->index('interval');
             $table->index('next_billing_date');
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('subscriptions', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            });
+        }
     }
 
     /**

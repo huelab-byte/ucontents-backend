@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignId('support_ticket_id')
                 ->constrained('support_tickets')
                 ->onDelete('cascade');
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->unsignedBigInteger('user_id');
             $table->text('message');
             $table->boolean('is_internal')->default(false);
             $table->timestamps();
@@ -28,6 +28,13 @@ return new class extends Migration
             $table->index('user_id');
             $table->index('created_at');
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('support_ticket_replies', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            });
+        }
     }
 
     /**

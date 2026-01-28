@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('social_auth_providers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id');
             $table->string('provider'); // google, facebook, tiktok
             $table->string('provider_id'); // External provider user ID
             $table->string('email')->nullable();
@@ -26,6 +26,13 @@ return new class extends Migration
             $table->index('user_id');
             $table->index('provider');
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('social_auth_providers', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            });
+        }
     }
 
     /**

@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->string('payment_number')->unique();
             $table->foreignId('invoice_id')->constrained('invoices')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id');
             $table->foreignId('payment_gateway_id')->nullable()->constrained('payment_gateways')->nullOnDelete();
             $table->string('gateway_name'); // stripe, paypal
             $table->string('gateway_transaction_id')->nullable(); // External gateway transaction ID
@@ -38,6 +38,13 @@ return new class extends Migration
             $table->index('status');
             $table->index('gateway_transaction_id');
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            });
+        }
     }
 
     /**

@@ -23,7 +23,7 @@ return new class extends Migration
             $table->json('settings')->nullable(); // Template settings (colors, fonts, etc.)
             $table->boolean('is_active')->default(true);
             $table->boolean('is_default')->default(false);
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -31,6 +31,13 @@ return new class extends Migration
             $table->index('is_active');
             $table->index('is_default');
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('invoice_templates', function (Blueprint $table) {
+                $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
+            });
+        }
     }
 
     /**

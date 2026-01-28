@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('otp_codes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id');
             $table->string('code', 6); // 6-digit OTP
             $table->string('type')->default('login'); // login, verification, password_reset
             $table->timestamp('expires_at');
@@ -27,6 +27,13 @@ return new class extends Migration
             $table->index(['user_id', 'type', 'used']);
             $table->index(['code', 'used', 'expires_at']);
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('otp_codes', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            });
+        }
     }
 
     /**

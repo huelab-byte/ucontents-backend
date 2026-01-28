@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('user_2fa_settings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id');
             $table->boolean('enabled')->default(false);
             $table->string('secret_key')->nullable(); // TOTP secret
             $table->json('backup_codes')->nullable(); // Array of backup codes
@@ -24,6 +24,13 @@ return new class extends Migration
 
             $table->unique('user_id');
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('user_2fa_settings', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            });
+        }
     }
 
     /**

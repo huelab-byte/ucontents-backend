@@ -27,13 +27,19 @@ return new class extends Migration
             
             $table->foreign('storage_file_id')->references('id')->on('storage_files')->onDelete('cascade');
             $table->foreign('folder_id')->references('id')->on('footage_folders')->onDelete('set null');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             
             $table->index(['user_id']);
             $table->index(['folder_id']);
             $table->index(['status']);
             $table->index(['embedding_id']);
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('footage', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            });
+        }
     }
 
     /**

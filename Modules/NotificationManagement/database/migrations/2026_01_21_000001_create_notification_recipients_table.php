@@ -20,9 +20,7 @@ return new class extends Migration
                 ->constrained('notifications')
                 ->cascadeOnDelete();
 
-            $table->foreignId('user_id')
-                ->constrained('users')
-                ->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id');
 
             $table->timestamp('read_at')->nullable();
             $table->timestamp('delivered_email_at')->nullable();
@@ -32,6 +30,13 @@ return new class extends Migration
             $table->unique(['notification_id', 'user_id']);
             $table->index(['user_id', 'read_at']);
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('notification_recipients', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            });
+        }
     }
 
     /**

@@ -21,16 +21,20 @@ return new class extends Migration
             $table->json('data')->nullable();
             $table->string('severity')->nullable(); // info|success|warning|error
 
-            $table->foreignId('created_by_user_id')
-                ->nullable()
-                ->constrained('users')
-                ->nullOnDelete();
+            $table->unsignedBigInteger('created_by_user_id')->nullable();
 
             $table->timestamps();
             $table->softDeletes();
 
             $table->index(['type', 'created_at']);
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('notifications', function (Blueprint $table) {
+                $table->foreign('created_by_user_id')->references('id')->on('users')->nullOnDelete();
+            });
+        }
     }
 
     /**

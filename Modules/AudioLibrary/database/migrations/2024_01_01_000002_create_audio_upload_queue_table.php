@@ -30,7 +30,6 @@ return new class extends Migration
             $table->timestamp('processed_at')->nullable();
             $table->timestamps();
             
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('folder_id')->references('id')->on('audio_folders')->onDelete('set null');
             $table->foreign('audio_id')->references('id')->on('audio')->onDelete('set null');
             
@@ -38,6 +37,13 @@ return new class extends Migration
             $table->index(['user_id']);
             $table->index(['folder_id']);
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('audio_upload_queue', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            });
+        }
     }
 
     /**

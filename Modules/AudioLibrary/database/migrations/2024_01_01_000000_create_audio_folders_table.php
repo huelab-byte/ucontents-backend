@@ -23,11 +23,17 @@ return new class extends Migration
             $table->softDeletes();
             
             $table->foreign('parent_id')->references('id')->on('audio_folders')->onDelete('cascade');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             
             $table->index(['user_id', 'parent_id']);
             $table->index(['path']);
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('audio_folders', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            });
+        }
     }
 
     /**

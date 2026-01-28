@@ -22,13 +22,20 @@ return new class extends Migration
             $table->json('credentials')->nullable(); // Encrypted gateway credentials
             $table->json('settings')->nullable(); // Additional gateway settings
             $table->text('description')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
             $table->index('name');
             $table->index('is_active');
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('payment_gateways', function (Blueprint $table) {
+                $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
+            });
+        }
     }
 
     /**

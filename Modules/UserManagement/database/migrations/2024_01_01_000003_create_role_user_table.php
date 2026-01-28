@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('role_user', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id');
             $table->foreignId('role_id')->constrained('roles')->cascadeOnDelete();
             $table->timestamps();
 
@@ -23,6 +23,13 @@ return new class extends Migration
             $table->index('user_id');
             $table->index('role_id');
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('role_user', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            });
+        }
     }
 
     /**

@@ -26,13 +26,20 @@ return new class extends Migration
             $table->json('settings')->nullable()->comment('Default model settings (temperature, max_tokens, etc.)');
             $table->boolean('is_active')->default(true);
             $table->boolean('is_system')->default(false)->comment('System templates cannot be deleted');
-            $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
             
             $table->index(['is_active', 'category']);
             $table->index('provider_slug');
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('ai_prompt_templates', function (Blueprint $table) {
+                $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
+            });
+        }
     }
 
     /**

@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
             $table->string('invoice_number')->unique();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id');
             $table->morphs('invoiceable'); // For packages, subscriptions, etc.
             $table->string('type')->default('package'); // package, subscription, one_time
             $table->decimal('subtotal', 15, 2);
@@ -29,7 +29,7 @@ return new class extends Migration
             $table->date('paid_at')->nullable();
             $table->text('notes')->nullable();
             $table->json('metadata')->nullable(); // Additional invoice data
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -39,6 +39,14 @@ return new class extends Migration
             $table->index('type');
             $table->index('due_date');
         });
+
+        // Add foreign keys to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('invoices', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+                $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
+            });
+        }
     }
 
     /**

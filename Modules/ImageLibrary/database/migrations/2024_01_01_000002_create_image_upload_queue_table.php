@@ -27,12 +27,18 @@ return new class extends Migration
             $table->unsignedBigInteger('image_id')->nullable();
             $table->timestamps();
             
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('folder_id')->references('id')->on('image_folders')->onDelete('set null');
             $table->foreign('image_id')->references('id')->on('images')->onDelete('set null');
             
             $table->index(['user_id', 'status']);
         });
+
+        // Add foreign key to users after ensuring users table exists
+        if (Schema::hasTable('users')) {
+            Schema::table('image_upload_queue', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            });
+        }
     }
 
     /**
