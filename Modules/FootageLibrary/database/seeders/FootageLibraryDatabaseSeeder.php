@@ -49,6 +49,7 @@ class FootageLibraryDatabaseSeeder extends Seeder
             'view_all_footage',
             'view_footage_stats',
             'delete_any_footage',
+            'manage_footage_folders', // Required for listing/accessing folders
         ])->pluck('id')->toArray();
 
         // Super admin gets all permissions

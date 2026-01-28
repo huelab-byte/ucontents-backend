@@ -44,6 +44,7 @@ class ImageOverlayDatabaseSeeder extends Seeder
             'view_all_image_overlay',
             'view_image_overlay_stats',
             'delete_any_image_overlay',
+            'manage_image_overlay_folders', // Required for listing/accessing folders
         ])->pluck('id')->toArray();
 
         // Super admin gets all permissions

@@ -43,6 +43,7 @@ class VideoOverlayDatabaseSeeder extends Seeder
             'view_all_video_overlay',
             'view_video_overlay_stats',
             'delete_any_video_overlay',
+            'manage_video_overlay_folders', // Required for listing/accessing folders
         ])->pluck('id')->toArray();
 
         // Super admin gets all permissions

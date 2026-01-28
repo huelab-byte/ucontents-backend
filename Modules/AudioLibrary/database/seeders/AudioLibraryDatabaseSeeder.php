@@ -48,6 +48,7 @@ class AudioLibraryDatabaseSeeder extends Seeder
             'view_all_audio',
             'view_audio_stats',
             'delete_any_audio',
+            'manage_audio_folders', // Required for listing/accessing folders
         ])->pluck('id')->toArray();
 
         // Super admin gets all permissions

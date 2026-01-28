@@ -48,6 +48,7 @@ class ImageLibraryDatabaseSeeder extends Seeder
             'view_all_image',
             'view_image_stats',
             'delete_any_image',
+            'manage_image_folders', // Required for listing/accessing folders
         ])->pluck('id')->toArray();
 
         // Super admin gets all permissions

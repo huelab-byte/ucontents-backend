@@ -44,6 +44,7 @@ class BgmLibraryDatabaseSeeder extends Seeder
             'view_all_bgm',
             'view_bgm_stats',
             'delete_any_bgm',
+            'manage_bgm_folders', // Required for listing/accessing folders
         ])->pluck('id')->toArray();
 
         // Super admin gets all permissions

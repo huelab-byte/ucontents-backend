@@ -5,6 +5,8 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Modules\UserManagement\Database\Seeders\UserManagementSeeder;
+use Modules\UserManagement\Models\Permission;
+use Modules\UserManagement\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
@@ -34,5 +36,23 @@ class DatabaseSeeder extends Seeder
 
         // Seed Support module (creates support permissions)
         $this->call(\Modules\Support\Database\Seeders\SupportDatabaseSeeder::class);
+
+        // Ensure super_admin has ALL permissions (system user - full access)
+        $this->syncSuperAdminPermissions();
+    }
+
+    /**
+     * Sync all permissions to super_admin role so the system user always has full access.
+     */
+    private function syncSuperAdminPermissions(): void
+    {
+        $superAdmin = Role::where('slug', 'super_admin')->first();
+        if (!$superAdmin) {
+            return;
+        }
+
+        $allPermissionIds = Permission::pluck('id')->toArray();
+        $superAdmin->permissions()->sync($allPermissionIds);
+        $this->command->info('Super Admin role synced with all ' . count($allPermissionIds) . ' permissions.');
     }
 }
