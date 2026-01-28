@@ -81,27 +81,26 @@ echo -e "${GREEN}[10/15] Installing Node.js...${NC}"
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt install -y nodejs
 
-# Install Qdrant
+# Install Qdrant (do not exit on failure - steps 12-15 must always run)
 echo -e "${GREEN}[11/15] Installing Qdrant...${NC}"
+set +e
 if [ ! -f /usr/bin/qdrant ]; then
     QDRANT_VERSION="1.7.4"
-    # Detect architecture (amd64 or arm64)
     case "$(uname -m)" in
         x86_64|amd64) ARCH="amd64" ;;
         aarch64|arm64) ARCH="arm64" ;;
-        *) echo -e "${RED}Unsupported architecture for Qdrant: $(uname -m)${NC}"; ARCH="amd64" ;;
+        *) ARCH="amd64" ;;
     esac
     echo "  Downloading Qdrant ${QDRANT_VERSION} for ${ARCH}..."
-    if ! wget -q "https://github.com/qdrant/qdrant/releases/download/v${QDRANT_VERSION}/qdrant-${QDRANT_VERSION}-${ARCH}.tar.gz" -O /tmp/qdrant.tar.gz; then
-        echo -e "${YELLOW}Qdrant download failed. Install manually or skip. Continuing...${NC}"
-    else
-        tar -xzf /tmp/qdrant.tar.gz -C /tmp
-        mv /tmp/qdrant /usr/bin/qdrant
-        chmod +x /usr/bin/qdrant
-        rm -f /tmp/qdrant.tar.gz
-        echo -e "${GREEN}  Qdrant installed.${NC}"
-    fi
+    wget -q "https://github.com/qdrant/qdrant/releases/download/v${QDRANT_VERSION}/qdrant-${QDRANT_VERSION}-${ARCH}.tar.gz" -O /tmp/qdrant.tar.gz 2>/dev/null && \
+    tar -xzf /tmp/qdrant.tar.gz -C /tmp 2>/dev/null && \
+    mv /tmp/qdrant /usr/bin/qdrant 2>/dev/null && \
+    chmod +x /usr/bin/qdrant && \
+    rm -f /tmp/qdrant.tar.gz && \
+    echo -e "${GREEN}  Qdrant installed.${NC}" || \
+    echo -e "${YELLOW}  Qdrant install failed. Create service anyway; install binary manually later.${NC}"
 fi
+set -e
 
 # Create Qdrant systemd service
 echo -e "${GREEN}[12/15] Creating Qdrant systemd service...${NC}"
