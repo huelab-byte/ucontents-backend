@@ -122,10 +122,13 @@ fi
 mkdir -p /var/lib/qdrant
 chown -R qdrant:qdrant /var/lib/qdrant
 
+# Reload systemd to recognize the new service
+systemctl daemon-reload
+
 # Create application directory structure
 echo -e "${GREEN}[13/15] Creating application directory structure...${NC}"
-mkdir -p /var/www/ucontents
-chown -R www-data:www-data /var/www/ucontents
+mkdir -p /var/www
+chown -R www-data:www-data /var/www
 
 # Configure firewall
 echo -e "${GREEN}[14/15] Configuring firewall...${NC}"
@@ -179,8 +182,8 @@ echo ""
 echo "Next steps:"
 echo "  1. Secure MySQL: sudo mysql_secure_installation"
 echo "  2. Create database and user (see docs/DEPLOYMENT.md)"
-echo "  3. Clone your repository so backend is at /var/www/ucontents/backend"
-echo "  4. Run: cd /var/www/ucontents/backend && ./scripts/deploy-backend.sh"
+echo "  3. Clone repo: cd /var/www && git clone https://github.com/huelab-byte/ucontents-backend.git ucontents-backend"
+echo "  4. Run: cd /var/www/ucontents-backend && ./scripts/deploy-backend.sh"
 echo ""
 echo -e "${YELLOW}Important:${NC}"
 echo "  - Configure MySQL root password"

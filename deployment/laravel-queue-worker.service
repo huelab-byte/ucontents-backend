@@ -6,8 +6,8 @@ After=network.target redis-server.service mysql.service
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=/var/www/ucontents/backend
-ExecStart=/usr/bin/php /var/www/ucontents/backend/artisan queue:work redis --sleep=3 --tries=3 --max-time=3600 --timeout=300
+WorkingDirectory=/var/www/ucontents-backend
+ExecStart=/usr/bin/php /var/www/ucontents-backend/artisan queue:work redis --sleep=3 --tries=3 --max-time=3600 --timeout=300
 Restart=always
 RestartSec=5
 StandardOutput=journal

@@ -13,11 +13,16 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Resolve paths: script is in backend/scripts/, so APP_DIR = backend
+# Resolve paths: script is in scripts/, APP_DIR = repo root (Laravel app)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-REPO_ROOT="$(cd "$APP_DIR/.." && pwd)"
-BACKUP_DIR="$REPO_ROOT/backups"
+# Repo root = app dir when this repo is backend-only (no parent monorepo)
+if [ -d "$APP_DIR/.git" ]; then
+    REPO_ROOT="$APP_DIR"
+else
+    REPO_ROOT="$(cd "$APP_DIR/.." && pwd)"
+fi
+BACKUP_DIR="$APP_DIR/backups"
 GIT_BRANCH="${1:-main}"  # Default to main branch
 
 echo "=========================================="

@@ -1,59 +1,56 @@
 # Deployment Scripts
 
-Scripts live inside the backend repo so you can push them to Git and run them on the VPS after cloning.
+This repo (**huelab-byte/ucontents-backend**) is the Laravel backend only; repo root = app root (no `backend/` folder).
+
+## Fresh VPS (no git installed)
+
+Download and run the setup script from GitHub (no clone needed first):
+
+```bash
+apt update && apt install -y curl
+curl -fsSL "https://raw.githubusercontent.com/huelab-byte/ucontents-backend/main/scripts/vps-setup.sh" -o vps-setup.sh
+chmod +x vps-setup.sh
+sudo ./vps-setup.sh
+```
+
+Then clone the repo:
+
+```bash
+cd /var/www
+git clone https://github.com/huelab-byte/ucontents-backend.git ucontents-backend
+```
 
 ## Layout on VPS
 
-Clone the **whole repo** (monorepo with `backend` and `frontend`) so that on the VPS you have:
-
-- `/var/www/ucontents/` — repo root  
-- `/var/www/ucontents/backend/` — Laravel app  
-- `/var/www/ucontents/backend/scripts/` — these scripts  
-- `/var/www/ucontents/backend/deployment/` — nginx and systemd configs  
+- `/var/www/ucontents-backend/` — repo root = Laravel app root
+- `/var/www/ucontents-backend/scripts/` — these scripts
+- `/var/www/ucontents-backend/deployment/` — nginx and systemd configs
 
 ## Scripts
 
 ### `vps-setup.sh`
 
-One-time VPS setup. Installs PHP, MySQL, Redis, Nginx, FFmpeg, Qdrant, Composer, Node, etc.
-
-**On VPS (after cloning backend):**
+One-time VPS setup (PHP, MySQL, Redis, Nginx, FFmpeg, Qdrant, Composer, Node, git). Run via curl (above) or after clone:
 
 ```bash
-cd /var/www/ucontents/backend
-chmod +x scripts/vps-setup.sh
-sudo ./scripts/vps-setup.sh
-```
-
-Or download only the backend (e.g. from GitHub) and run:
-
-```bash
-cd /path/to/backend
+cd /var/www/ucontents-backend
 chmod +x scripts/vps-setup.sh
 sudo ./scripts/vps-setup.sh
 ```
 
 ### `deploy-backend.sh`
 
-Deploys/updates the Laravel app: backup DB, pull code, migrate, cache, permissions, restart queue.
-
-**On VPS (run from backend directory):**
+Deploy/update the app. Run from repo root:
 
 ```bash
-cd /var/www/ucontents/backend
-chmod +x scripts/deploy-backend.sh
-./scripts/deploy-backend.sh          # uses branch 'main'
-./scripts/deploy-backend.sh develop  # or another branch
+cd /var/www/ucontents-backend
+./scripts/deploy-backend.sh
+# or: ./scripts/deploy-backend.sh develop
 ```
-
-The script detects it is inside `backend/` and uses the parent directory as repo root for `git pull`.
 
 ## Deployment configs
 
-- **Nginx:** `backend/deployment/nginx-app.ucontents.com.conf`  
-  Copy to `/etc/nginx/sites-available/` and enable the site.
+- **Nginx:** `deployment/nginx-app.ucontents.com.conf` → copy to `/etc/nginx/sites-available/`
+- **Queue worker:** `deployment/laravel-queue-worker.service` → copy to `/etc/systemd/system/`
 
-- **Queue worker:** `backend/deployment/laravel-queue-worker.service`  
-  Copy to `/etc/systemd/system/` and enable/start the service.
-
-See `docs/DEPLOYMENT.md` (in the repo root) for full steps.
+See `docs/DEPLOYMENT.md` in the repo for the full flow.
