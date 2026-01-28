@@ -84,14 +84,23 @@ apt install -y nodejs
 # Install Qdrant
 echo -e "${GREEN}[11/15] Installing Qdrant...${NC}"
 if [ ! -f /usr/bin/qdrant ]; then
-    # Download Qdrant binary
     QDRANT_VERSION="1.7.4"
-    ARCH="amd64"
-    wget -q https://github.com/qdrant/qdrant/releases/download/v${QDRANT_VERSION}/qdrant-${QDRANT_VERSION}-${ARCH}.tar.gz
-    tar -xzf qdrant-${QDRANT_VERSION}-${ARCH}.tar.gz
-    mv qdrant /usr/bin/qdrant
-    chmod +x /usr/bin/qdrant
-    rm qdrant-${QDRANT_VERSION}-${ARCH}.tar.gz
+    # Detect architecture (amd64 or arm64)
+    case "$(uname -m)" in
+        x86_64|amd64) ARCH="amd64" ;;
+        aarch64|arm64) ARCH="arm64" ;;
+        *) echo -e "${RED}Unsupported architecture for Qdrant: $(uname -m)${NC}"; ARCH="amd64" ;;
+    esac
+    echo "  Downloading Qdrant ${QDRANT_VERSION} for ${ARCH}..."
+    if ! wget -q "https://github.com/qdrant/qdrant/releases/download/v${QDRANT_VERSION}/qdrant-${QDRANT_VERSION}-${ARCH}.tar.gz" -O /tmp/qdrant.tar.gz; then
+        echo -e "${YELLOW}Qdrant download failed. Install manually or skip. Continuing...${NC}"
+    else
+        tar -xzf /tmp/qdrant.tar.gz -C /tmp
+        mv /tmp/qdrant /usr/bin/qdrant
+        chmod +x /usr/bin/qdrant
+        rm -f /tmp/qdrant.tar.gz
+        echo -e "${GREEN}  Qdrant installed.${NC}"
+    fi
 fi
 
 # Create Qdrant systemd service
