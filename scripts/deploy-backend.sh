@@ -101,8 +101,18 @@ php artisan route:clear
 php artisan view:clear
 
 php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+
+# Route cache (skip if there are duplicate route names)
+php artisan route:cache 2>/dev/null || {
+    echo -e "${YELLOW}Warning: Route caching failed (likely duplicate route names). Routes will not be cached.${NC}"
+    echo -e "${YELLOW}This is not critical - routes will work, just not cached for performance.${NC}"
+}
+
+# View cache (skip if view directories don't exist)
+php artisan view:cache 2>/dev/null || {
+    echo -e "${YELLOW}Warning: View caching failed (likely missing view directories). Views will not be cached.${NC}"
+    echo -e "${YELLOW}This is not critical - views will work, just not cached for performance.${NC}"
+}
 
 # Ensure storage link exists
 echo -e "${GREEN}[8/10] Ensuring storage link...${NC}"
