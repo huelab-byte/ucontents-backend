@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('ai_usage_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('api_key_id')->constrained('ai_api_keys')->onDelete('cascade');
+            $table->unsignedBigInteger('api_key_id');
             $table->unsignedBigInteger('user_id')->nullable();
             $table->string('provider_slug');
             $table->string('model');
@@ -39,7 +39,12 @@ return new class extends Migration
             $table->index('status');
         });
 
-        // Add foreign key to users after ensuring users table exists
+        // Add foreign keys after ensuring referenced tables exist
+        if (Schema::hasTable('ai_api_keys')) {
+            Schema::table('ai_usage_logs', function (Blueprint $table) {
+                $table->foreign('api_key_id')->references('id')->on('ai_api_keys')->onDelete('cascade');
+            });
+        }
         if (Schema::hasTable('users')) {
             Schema::table('ai_usage_logs', function (Blueprint $table) {
                 $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');

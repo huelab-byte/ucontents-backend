@@ -23,15 +23,20 @@ return new class extends Migration
                 ->nullable()
                 ->constrained('support_ticket_replies')
                 ->onDelete('cascade');
-            $table->foreignId('storage_file_id')
-                ->constrained('storage_files')
-                ->onDelete('cascade');
+            $table->unsignedBigInteger('storage_file_id');
             $table->timestamps();
 
             $table->index('support_ticket_id');
             $table->index('support_ticket_reply_id');
             $table->index('storage_file_id');
         });
+
+        // Add foreign key to storage_files after ensuring storage_files table exists
+        if (Schema::hasTable('storage_files')) {
+            Schema::table('support_ticket_attachments', function (Blueprint $table) {
+                $table->foreign('storage_file_id')->references('id')->on('storage_files')->onDelete('cascade');
+            });
+        }
     }
 
     /**

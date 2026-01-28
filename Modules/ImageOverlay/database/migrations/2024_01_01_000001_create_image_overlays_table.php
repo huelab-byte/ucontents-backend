@@ -24,14 +24,18 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
             
-            $table->foreign('storage_file_id')->references('id')->on('storage_files')->onDelete('cascade');
             $table->foreign('folder_id')->references('id')->on('image_overlay_folders')->onDelete('set null');
             
             $table->index(['user_id', 'status']);
             $table->index(['folder_id']);
         });
 
-        // Add foreign key to users after ensuring users table exists
+        // Add foreign keys after ensuring referenced tables exist
+        if (Schema::hasTable('storage_files')) {
+            Schema::table('image_overlays', function (Blueprint $table) {
+                $table->foreign('storage_file_id')->references('id')->on('storage_files')->onDelete('cascade');
+            });
+        }
         if (Schema::hasTable('users')) {
             Schema::table('image_overlays', function (Blueprint $table) {
                 $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
