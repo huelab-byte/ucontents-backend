@@ -83,6 +83,10 @@ cd "$APP_DIR"
 echo -e "${GREEN}[4/10] Installing Composer dependencies...${NC}"
 composer install --no-dev --optimize-autoloader --no-interaction
 
+# Regenerate autoloader (suppress PSR-4 warnings from modules - they're handled by Laravel Modules)
+echo -e "${GREEN}[4.5/10] Regenerating autoloader...${NC}"
+composer dump-autoload --optimize --no-interaction 2>&1 | grep -v "does not comply with psr-4" || true
+
 # Install/update NPM dependencies (if needed)
 if [ -f package.json ]; then
     echo -e "${GREEN}[5/10] Installing NPM dependencies...${NC}"
@@ -92,6 +96,14 @@ fi
 # Run database migrations (safe, won't lose data)
 echo -e "${GREEN}[6/10] Running database migrations...${NC}"
 php artisan migrate --force
+
+# Run database seeders (safe - uses firstOrCreate/updateOrCreate)
+echo -e "${GREEN}[6.5/10] Running database seeders...${NC}"
+# Run seeders (all seeders use firstOrCreate/updateOrCreate - safe for repeated runs)
+# Note: PSR-4 warnings from modules are harmless - Laravel Modules handles loading
+php artisan db:seed --force || {
+    echo -e "${YELLOW}Warning: Seeder execution had issues. Check logs. Continuing deployment...${NC}"
+}
 
 # Clear and cache configuration
 echo -e "${GREEN}[7/10] Optimizing application...${NC}"

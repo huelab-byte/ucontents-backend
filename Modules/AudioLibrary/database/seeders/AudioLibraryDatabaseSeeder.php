@@ -6,6 +6,7 @@ namespace Modules\AudioLibrary\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Modules\UserManagement\Models\Permission;
+use Modules\UserManagement\Models\Role;
 
 class AudioLibraryDatabaseSeeder extends Seeder
 {
@@ -27,8 +28,9 @@ class AudioLibraryDatabaseSeeder extends Seeder
             'manage_audio_library' => 'Manage audio library',
         ];
 
+        $permissionIds = [];
         foreach ($permissions as $slug => $description) {
-            Permission::firstOrCreate(
+            $permission = Permission::firstOrCreate(
                 ['slug' => $slug],
                 [
                     'name' => ucwords(str_replace('_', ' ', $slug)),
@@ -36,6 +38,34 @@ class AudioLibraryDatabaseSeeder extends Seeder
                     'module' => 'AudioLibrary',
                 ]
             );
+            $permissionIds[] = $permission->id;
+        }
+
+        // Assign admin permissions to super_admin and admin roles
+        $adminPermissions = Permission::whereIn('slug', [
+            'view_audio_library',
+            'manage_audio_library',
+            'view_all_audio',
+            'view_audio_stats',
+            'delete_any_audio',
+        ])->pluck('id')->toArray();
+
+        // Super admin gets all permissions
+        $superAdmin = Role::where('slug', 'super_admin')->first();
+        if ($superAdmin) {
+            $existingPermissionIds = $superAdmin->permissions()->pluck('permissions.id')->toArray();
+            $newPermissionIds = array_unique(array_merge($existingPermissionIds, $permissionIds));
+            $superAdmin->permissions()->sync($newPermissionIds);
+            $this->command->info('AudioLibrary permissions assigned to Super Admin role.');
+        }
+
+        // Admin role gets admin-level permissions
+        $admin = Role::where('slug', 'admin')->first();
+        if ($admin) {
+            $existingPermissionIds = $admin->permissions()->pluck('permissions.id')->toArray();
+            $newPermissionIds = array_unique(array_merge($existingPermissionIds, $adminPermissions));
+            $admin->permissions()->sync($newPermissionIds);
+            $this->command->info('AudioLibrary permissions assigned to Admin role.');
         }
     }
 }

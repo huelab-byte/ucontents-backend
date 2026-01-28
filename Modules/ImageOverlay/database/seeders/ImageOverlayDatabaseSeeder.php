@@ -39,13 +39,29 @@ class ImageOverlayDatabaseSeeder extends Seeder
             $permissionIds[] = $permission->id;
         }
 
-        // Assign all permissions to super_admin
+        // Assign admin permissions to super_admin and admin roles
+        $adminPermissions = Permission::whereIn('slug', [
+            'view_all_image_overlay',
+            'view_image_overlay_stats',
+            'delete_any_image_overlay',
+        ])->pluck('id')->toArray();
+
+        // Super admin gets all permissions
         $superAdmin = Role::where('slug', 'super_admin')->first();
         if ($superAdmin) {
             $existingPermissionIds = $superAdmin->permissions()->pluck('permissions.id')->toArray();
             $newPermissionIds = array_unique(array_merge($existingPermissionIds, $permissionIds));
             $superAdmin->permissions()->sync($newPermissionIds);
             $this->command->info('ImageOverlay permissions assigned to Super Admin role.');
+        }
+
+        // Admin role gets admin-level permissions
+        $admin = Role::where('slug', 'admin')->first();
+        if ($admin) {
+            $existingPermissionIds = $admin->permissions()->pluck('permissions.id')->toArray();
+            $newPermissionIds = array_unique(array_merge($existingPermissionIds, $adminPermissions));
+            $admin->permissions()->sync($newPermissionIds);
+            $this->command->info('ImageOverlay permissions assigned to Admin role.');
         }
     }
 }

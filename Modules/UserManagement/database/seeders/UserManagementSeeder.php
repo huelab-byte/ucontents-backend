@@ -149,6 +149,30 @@ class UserManagementSeeder extends Seeder
                     // Footage Library
                     'view_footage_library',
                     'manage_footage_library',
+                    // Audio Library
+                    'view_audio_library',
+                    'manage_audio_library',
+                    'view_all_audio',
+                    'view_audio_stats',
+                    'delete_any_audio',
+                    // Image Library
+                    'view_image_library',
+                    'manage_image_library',
+                    'view_all_image',
+                    'view_image_stats',
+                    'delete_any_image',
+                    // BGM Library
+                    'view_all_bgm',
+                    'view_bgm_stats',
+                    'delete_any_bgm',
+                    // Video Overlay
+                    'view_all_video_overlay',
+                    'view_video_overlay_stats',
+                    'delete_any_video_overlay',
+                    // Image Overlay
+                    'view_all_image_overlay',
+                    'view_image_overlay_stats',
+                    'delete_any_image_overlay',
                     // Social Connection
                     'manage_social_connection_providers',
                     // Support Tickets

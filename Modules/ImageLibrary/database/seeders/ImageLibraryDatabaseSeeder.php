@@ -6,6 +6,7 @@ namespace Modules\ImageLibrary\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Modules\UserManagement\Models\Permission;
+use Modules\UserManagement\Models\Role;
 
 class ImageLibraryDatabaseSeeder extends Seeder
 {
@@ -27,8 +28,9 @@ class ImageLibraryDatabaseSeeder extends Seeder
             'manage_image_library' => 'Manage image library',
         ];
 
+        $permissionIds = [];
         foreach ($permissions as $slug => $description) {
-            Permission::firstOrCreate(
+            $permission = Permission::firstOrCreate(
                 ['slug' => $slug],
                 [
                     'name' => ucwords(str_replace('_', ' ', $slug)),
@@ -36,6 +38,34 @@ class ImageLibraryDatabaseSeeder extends Seeder
                     'module' => 'ImageLibrary',
                 ]
             );
+            $permissionIds[] = $permission->id;
+        }
+
+        // Assign admin permissions to super_admin and admin roles
+        $adminPermissions = Permission::whereIn('slug', [
+            'view_image_library',
+            'manage_image_library',
+            'view_all_image',
+            'view_image_stats',
+            'delete_any_image',
+        ])->pluck('id')->toArray();
+
+        // Super admin gets all permissions
+        $superAdmin = Role::where('slug', 'super_admin')->first();
+        if ($superAdmin) {
+            $existingPermissionIds = $superAdmin->permissions()->pluck('permissions.id')->toArray();
+            $newPermissionIds = array_unique(array_merge($existingPermissionIds, $permissionIds));
+            $superAdmin->permissions()->sync($newPermissionIds);
+            $this->command->info('ImageLibrary permissions assigned to Super Admin role.');
+        }
+
+        // Admin role gets admin-level permissions
+        $admin = Role::where('slug', 'admin')->first();
+        if ($admin) {
+            $existingPermissionIds = $admin->permissions()->pluck('permissions.id')->toArray();
+            $newPermissionIds = array_unique(array_merge($existingPermissionIds, $adminPermissions));
+            $admin->permissions()->sync($newPermissionIds);
+            $this->command->info('ImageLibrary permissions assigned to Admin role.');
         }
     }
 }

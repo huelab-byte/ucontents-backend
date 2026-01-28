@@ -6,7 +6,7 @@ namespace Modules\FootageLibrary\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Modules\UserManagement\Models\Permission;
-use Illuminate\Support\Facades\DB;
+use Modules\UserManagement\Models\Role;
 
 class FootageLibraryDatabaseSeeder extends Seeder
 {
@@ -25,10 +25,13 @@ class FootageLibraryDatabaseSeeder extends Seeder
             'view_all_footage' => 'View all footage (admin)',
             'delete_any_footage' => 'Delete any footage (admin)',
             'view_footage_stats' => 'View footage statistics (admin)',
+            'view_footage_library' => 'View footage library',
+            'manage_footage_library' => 'Manage footage library',
         ];
 
+        $permissionIds = [];
         foreach ($permissions as $slug => $description) {
-            Permission::firstOrCreate(
+            $permission = Permission::firstOrCreate(
                 ['slug' => $slug],
                 [
                     'name' => ucwords(str_replace('_', ' ', $slug)),
@@ -36,6 +39,34 @@ class FootageLibraryDatabaseSeeder extends Seeder
                     'module' => 'FootageLibrary',
                 ]
             );
+            $permissionIds[] = $permission->id;
+        }
+
+        // Assign admin permissions to super_admin and admin roles
+        $adminPermissions = Permission::whereIn('slug', [
+            'view_footage_library',
+            'manage_footage_library',
+            'view_all_footage',
+            'view_footage_stats',
+            'delete_any_footage',
+        ])->pluck('id')->toArray();
+
+        // Super admin gets all permissions
+        $superAdmin = Role::where('slug', 'super_admin')->first();
+        if ($superAdmin) {
+            $existingPermissionIds = $superAdmin->permissions()->pluck('permissions.id')->toArray();
+            $newPermissionIds = array_unique(array_merge($existingPermissionIds, $permissionIds));
+            $superAdmin->permissions()->sync($newPermissionIds);
+            $this->command->info('FootageLibrary permissions assigned to Super Admin role.');
+        }
+
+        // Admin role gets admin-level permissions
+        $admin = Role::where('slug', 'admin')->first();
+        if ($admin) {
+            $existingPermissionIds = $admin->permissions()->pluck('permissions.id')->toArray();
+            $newPermissionIds = array_unique(array_merge($existingPermissionIds, $adminPermissions));
+            $admin->permissions()->sync($newPermissionIds);
+            $this->command->info('FootageLibrary permissions assigned to Admin role.');
         }
     }
 }
