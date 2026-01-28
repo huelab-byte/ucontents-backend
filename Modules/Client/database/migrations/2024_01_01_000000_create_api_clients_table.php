@@ -23,7 +23,7 @@ return new class extends Migration
             $table->json('rate_limit')->nullable(); // Custom rate limit override
             $table->timestamp('last_used_at')->nullable();
             $table->timestamp('expires_at')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
@@ -31,6 +31,13 @@ return new class extends Migration
             $table->index('environment');
             $table->index('created_by');
         });
+
+        // Add foreign key constraint after table creation (ensures users table exists)
+        if (Schema::hasTable('users')) {
+            Schema::table('api_clients', function (Blueprint $table) {
+                $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
+            });
+        }
     }
 
     /**

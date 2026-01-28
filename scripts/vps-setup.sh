@@ -85,14 +85,14 @@ apt install -y nodejs
 echo -e "${GREEN}[11/15] Installing Qdrant...${NC}"
 set +e
 if [ ! -f /usr/bin/qdrant ]; then
-    QDRANT_VERSION="1.7.4"
+    QDRANT_VERSION="1.16.3"
     case "$(uname -m)" in
-        x86_64|amd64) ARCH="amd64" ;;
-        aarch64|arm64) ARCH="arm64" ;;
-        *) ARCH="amd64" ;;
+        x86_64|amd64) ARCH="x86_64-unknown-linux-gnu" ;;
+        aarch64|arm64) ARCH="aarch64-unknown-linux-gnu" ;;
+        *) ARCH="x86_64-unknown-linux-gnu" ;;
     esac
     echo "  Downloading Qdrant ${QDRANT_VERSION} for ${ARCH}..."
-    wget -q "https://github.com/qdrant/qdrant/releases/download/v${QDRANT_VERSION}/qdrant-${QDRANT_VERSION}-${ARCH}.tar.gz" -O /tmp/qdrant.tar.gz 2>/dev/null && \
+    wget -q "https://github.com/qdrant/qdrant/releases/download/v${QDRANT_VERSION}/qdrant-${ARCH}.tar.gz" -O /tmp/qdrant.tar.gz 2>/dev/null && \
     tar -xzf /tmp/qdrant.tar.gz -C /tmp 2>/dev/null && \
     mv /tmp/qdrant /usr/bin/qdrant 2>/dev/null && \
     chmod +x /usr/bin/qdrant && \
