@@ -46,6 +46,8 @@ Route::prefix('v1')->group(function () {
                 ->name('customer.social-connection.providers');
             Route::get('/{provider}/redirect', [SocialConnectionController::class, 'redirect'])
                 ->name('customer.social-connection.redirect');
+            Route::post('/{provider}/exchange-code', [SocialConnectionController::class, 'exchangeCode'])
+                ->name('customer.social-connection.exchange-code');
             Route::get('/{provider}/available-channels', [SocialConnectionController::class, 'getAvailableChannels'])
                 ->name('customer.social-connection.available-channels');
             Route::post('/{provider}/save-selected', [SocialConnectionController::class, 'saveSelectedChannels'])

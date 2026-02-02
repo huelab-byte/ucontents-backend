@@ -120,14 +120,13 @@ class SocialConnectionController extends BaseApiController
             );
         }
 
-        $callbackUrl = rtrim(config('app.url', env('APP_URL', 'http://localhost:8000')), '/')
-            . "/api/v1/customer/social-connection/{$provider}/callback";
-
         // For Meta provider, accept channel_types filter (facebook_page, facebook_profile, instagram_business)
         $validated = $request->validated();
         $channelTypes = ($provider === 'meta' && isset($validated['channel_types']))
             ? $validated['channel_types']
             : null;
+
+        $callbackUrl = $this->buildOAuthCallbackUrl($provider, $channelTypes);
 
         $redirectUrl = $action->execute($request->user(), $provider, $app, $callbackUrl, $channelTypes);
 
@@ -155,8 +154,7 @@ class SocialConnectionController extends BaseApiController
             return $this->error('Provider is not enabled', 400);
         }
 
-        $callbackUrl = rtrim(config('app.url', env('APP_URL', 'http://localhost:8000')), '/')
-            . "/api/v1/customer/social-connection/{$provider}/callback";
+        $callbackUrl = $this->buildOAuthCallbackUrl($provider, null);
 
         try {
             $result = $action->execute(
@@ -420,6 +418,152 @@ class SocialConnectionController extends BaseApiController
         } catch (\Throwable $e) {
             return $this->error($e->getMessage(), 400);
         }
+    }
+
+    /**
+     * Exchange OAuth code for tokens when redirect_uri is the frontend (main domain).
+     * Called by the frontend callback page after the provider redirects with ?code=&state=
+     */
+    public function exchangeCode(
+        Request $request,
+        string $provider,
+        HandleChannelCallbackAction $action
+    ): JsonResponse {
+        if (!Schema::hasTable('social_provider_apps')) {
+            return $this->error(
+                "SocialConnection tables are not migrated yet. Run `php artisan migrate`.",
+                500
+            );
+        }
+
+        if (!in_array($provider, self::ALLOWED_PROVIDERS, true)) {
+            return $this->error('Invalid provider', 400);
+        }
+
+        $code = $request->input('code');
+        $state = $request->input('state');
+        if (empty($code) || empty($state)) {
+            return $this->error('Missing code or state', 400);
+        }
+
+        if (!config('app.oauth_redirect_use_frontend', false)) {
+            return $this->error('Exchange-code is only used when OAuth redirect is set to frontend', 400);
+        }
+
+        $app = SocialProviderApp::query()->where('provider', $provider)->first();
+        if (!$app || !$this->isProviderEnabledForCustomer($app)) {
+            return $this->error('Provider is not enabled', 400);
+        }
+
+        // Use redirect_uri from frontend so token exchange matches the exact URL the provider redirected to
+        $redirectUri = $request->input('redirect_uri');
+        $callbackUrl = $this->resolveCallbackUrlForExchange($provider, $redirectUri);
+
+        // Make code/state available to Socialite (it reads from current request)
+        $request->merge(['code' => $code, 'state' => $state]);
+
+        try {
+            $result = $action->execute(
+                $provider,
+                $app,
+                $callbackUrl,
+                $state
+            );
+
+            $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', env('APP_URL', 'http://localhost:3000')));
+            $baseUrl = rtrim($frontendUrl, '/');
+
+            if ($provider === 'meta' && isset($result['selection_token'])) {
+                $redirectUrl = "{$baseUrl}/connection?provider={$provider}&status=select&token={$result['selection_token']}&channels_available={$result['channels_available']}";
+                return $this->success(['redirect_url' => $redirectUrl], 'OK');
+            }
+
+            $channelsUpserted = $result['channels_upserted'] ?? 0;
+            $redirectUrl = "{$baseUrl}/connection?provider={$provider}&status=success&channels_upserted={$channelsUpserted}";
+            return $this->success(['redirect_url' => $redirectUrl], 'OK');
+        } catch (\Throwable $e) {
+            Log::error('SocialConnection exchangeCode failed', [
+                'provider' => $provider,
+                'user_id' => $request->user()->id ?? null,
+                'message' => $e->getMessage(),
+            ]);
+
+            $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', env('APP_URL', 'http://localhost:3000')));
+            $baseUrl = rtrim($frontendUrl, '/');
+            $redirectUrl = "{$baseUrl}/connection?provider={$provider}&status=error&error=connection_failed";
+            return $this->success(['redirect_url' => $redirectUrl], 'OK');
+        }
+    }
+
+    /**
+     * Build OAuth callback URL: frontend /app/{platform}/{type} when OAUTH_REDIRECT_USE_FRONTEND is true, else backend.
+     * Paths: /app/tiktok/profile, /app/youtube/channel, /app/facebook/profile, /app/facebook/page, /app/instagram/profile
+     */
+    private function buildOAuthCallbackUrl(string $provider, ?array $channelTypes = null): string
+    {
+        if (config('app.oauth_redirect_use_frontend', false)) {
+            $frontendUrl = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/');
+            $path = $this->oauthCallbackPath($provider, $channelTypes);
+            return $frontendUrl . '/app/' . $path;
+        }
+
+        return rtrim(config('app.url', env('APP_URL', 'http://localhost:8000')), '/')
+            . "/api/v1/customer/social-connection/{$provider}/callback";
+    }
+
+    /**
+     * Return path segment for frontend callback (no leading slash).
+     * tiktok → tiktok/profile; google → youtube/channel; meta → facebook/profile|facebook/page|instagram/profile
+     */
+    private function oauthCallbackPath(string $provider, ?array $channelTypes = null): string
+    {
+        if ($provider === 'tiktok') {
+            return 'tiktok/profile';
+        }
+        if ($provider === 'google') {
+            return 'youtube/channel';
+        }
+        if ($provider === 'meta') {
+            if (is_array($channelTypes) && count($channelTypes) === 1) {
+                $t = $channelTypes[0];
+                if ($t === 'facebook_profile') {
+                    return 'facebook/profile';
+                }
+                if ($t === 'facebook_page') {
+                    return 'facebook/page';
+                }
+                if ($t === 'instagram_business' || $t === 'instagram_profile') {
+                    return 'instagram/profile';
+                }
+            }
+            return 'facebook/profile';
+        }
+        return $provider . '/profile';
+    }
+
+    /**
+     * Resolve callback URL for exchange-code: use redirect_uri from request if path is allowed, else build from provider.
+     * Returns URL without query/fragment so it matches what was sent in the authorization request.
+     */
+    private function resolveCallbackUrlForExchange(string $provider, ?string $redirectUri): string
+    {
+        $allowedPaths = [
+            'tiktok/profile',
+            'youtube/channel',
+            'facebook/profile',
+            'facebook/page',
+            'instagram/profile',
+        ];
+        if ($redirectUri !== null && $redirectUri !== '') {
+            $parsed = parse_url($redirectUri);
+            $path = isset($parsed['path']) ? ltrim($parsed['path'], '/') : '';
+            foreach ($allowedPaths as $allowed) {
+                if ($path === 'app/' . $allowed || $path === $allowed) {
+                    return preg_replace('/[#?].*$/', '', $redirectUri);
+                }
+            }
+        }
+        return $this->buildOAuthCallbackUrl($provider, null);
     }
 
     private function isProviderEnabledForCustomer(SocialProviderApp $app): bool

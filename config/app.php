@@ -58,6 +58,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | OAuth redirect URI base
+    |--------------------------------------------------------------------------
+    | When set, OAuth providers (e.g. Meta) will redirect to the frontend domain
+    | instead of the backend. Use this when frontend (e.g. ucontents.com) and
+    | backend (e.g. app.ucontents.com) differ to avoid provider blocking.
+    | Callback paths: {frontend_url}/app/tiktok/profile, /app/youtube/channel,
+    | /app/facebook/profile, /app/facebook/page, /app/instagram/profile
+    */
+    'oauth_redirect_use_frontend' => (bool) env('OAUTH_REDIRECT_USE_FRONTEND', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |
