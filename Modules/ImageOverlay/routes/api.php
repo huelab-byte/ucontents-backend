@@ -40,6 +40,17 @@ Route::prefix('v1')->group(function () {
             'module.feature:ImageOverlay',
         ])
         ->group(function () {
+            // Browse overlays (read-only; use_image_overlay)
+            Route::get('image-overlay/browse', [\Modules\ImageOverlay\Http\Controllers\Api\V1\Customer\ImageOverlayController::class, 'browseIndex'])
+                ->name('customer.image-overlay.browse')
+                ->middleware('permission:use_image_overlay');
+            Route::get('image-overlay/browse/folders', [\Modules\ImageOverlay\Http\Controllers\Api\V1\Customer\ImageOverlayController::class, 'browseFolders'])
+                ->name('customer.image-overlay.browse.folders')
+                ->middleware('permission:use_image_overlay');
+            Route::get('image-overlay/browse/{id}', [\Modules\ImageOverlay\Http\Controllers\Api\V1\Customer\ImageOverlayController::class, 'browseShow'])
+                ->name('customer.image-overlay.browse.show')
+                ->middleware('permission:use_image_overlay');
+
             // Image overlay operations
             Route::post('image-overlay/upload', [\Modules\ImageOverlay\Http\Controllers\Api\V1\Customer\ImageOverlayController::class, 'upload'])
                 ->name('customer.image-overlay.upload')

@@ -139,4 +139,72 @@ return [
     'view_all_footage' => 'View all footage (admin)',
     'delete_any_footage' => 'Delete any footage (admin)',
     'view_footage_stats' => 'View footage statistics (admin)',
+    'view_footage_library' => 'View footage library',
+    'manage_footage_library' => 'Manage footage library',
+    'use_footage_library' => 'Browse and use shared footage library (read-only)',
+
+    // Audio Library
+    'upload_audio' => 'Upload audio',
+    'bulk_upload_audio' => 'Bulk upload audio',
+    'view_audio' => 'View own audio',
+    'manage_audio' => 'Edit/delete own audio',
+    'manage_audio_folders' => 'Manage audio folders',
+    'view_all_audio' => 'View all audio (admin)',
+    'delete_any_audio' => 'Delete any audio (admin)',
+    'view_audio_stats' => 'View audio statistics (admin)',
+    'view_audio_library' => 'View audio library',
+    'manage_audio_library' => 'Manage audio library',
+    'use_audio_library' => 'Browse and use shared audio library (read-only)',
+
+    // Image Library
+    'upload_image' => 'Upload image',
+    'bulk_upload_image' => 'Bulk upload image',
+    'view_image' => 'View own image',
+    'manage_image' => 'Edit/delete own image',
+    'manage_image_folders' => 'Manage image folders',
+    'view_all_image' => 'View all image (admin)',
+    'delete_any_image' => 'Delete any image (admin)',
+    'view_image_stats' => 'View image statistics (admin)',
+    'view_image_library' => 'View image library',
+    'manage_image_library' => 'Manage image library',
+    'use_image_library' => 'Browse and use shared image library (read-only)',
+
+    // BGM Library
+    'upload_bgm' => 'Upload BGM',
+    'bulk_upload_bgm' => 'Bulk upload BGM',
+    'view_bgm' => 'View own BGM',
+    'manage_bgm' => 'Edit/delete own BGM',
+    'manage_bgm_folders' => 'Manage BGM folders',
+    'view_all_bgm' => 'View all BGM (admin)',
+    'delete_any_bgm' => 'Delete any BGM (admin)',
+    'view_bgm_stats' => 'View BGM statistics (admin)',
+    'use_bgm_library' => 'Browse and use shared BGM library (read-only)',
+
+    // Video Overlay
+    'upload_video_overlay' => 'Upload video overlay',
+    'view_video_overlay' => 'View own video overlay',
+    'manage_video_overlay' => 'Edit/delete own video overlay',
+    'manage_video_overlay_folders' => 'Manage video overlay folders',
+    'view_all_video_overlay' => 'View all video overlay (admin)',
+    'delete_any_video_overlay' => 'Delete any video overlay (admin)',
+    'view_video_overlay_stats' => 'View video overlay statistics (admin)',
+    'use_video_overlay' => 'Browse and use shared video overlays (read-only)',
+
+    // Image Overlay
+    'upload_image_overlay' => 'Upload image overlay',
+    'bulk_upload_image_overlay' => 'Bulk upload image overlay',
+    'view_image_overlay' => 'View own image overlay',
+    'manage_image_overlay' => 'Edit/delete own image overlay',
+    'manage_image_overlay_folders' => 'Manage image overlay folders',
+    'view_all_image_overlay' => 'View all image overlay (admin)',
+    'delete_any_image_overlay' => 'Delete any image overlay (admin)',
+    'view_image_overlay_stats' => 'View image overlay statistics (admin)',
+    'use_image_overlay' => 'Browse and use shared image overlays (read-only)',
+
+    // Media Upload
+    'view_media_upload_folders' => 'View media upload folders',
+    'manage_media_upload_folders' => 'Manage media upload folders',
+    'upload_media' => 'Upload media',
+    'manage_media_uploads' => 'Manage media uploads',
+    'manage_caption_templates' => 'Manage caption templates',
 ];

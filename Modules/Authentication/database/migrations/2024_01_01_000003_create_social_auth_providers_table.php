@@ -13,6 +13,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Idempotent: skip if table already exists
+        if (Schema::hasTable('social_auth_providers')) {
+            return;
+        }
+
         Schema::create('social_auth_providers', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');

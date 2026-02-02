@@ -6,7 +6,9 @@ namespace Modules\FootageLibrary\Services;
 
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Modules\FootageLibrary\Models\Footage;
+use Modules\FootageLibrary\Models\FootageFolder;
 
 /**
  * Service for building footage queries with filters
@@ -36,6 +38,32 @@ class FootageQueryService
         $this->applyFilters($query, $filters);
 
         return $query->orderByDesc('created_at')->paginate($perPage);
+    }
+
+    /**
+     * List customer-visible (shared) footage for browse/use (read-only). Returns ready items only.
+     */
+    public function listCustomerVisibleWithFilters(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        $query = Footage::where('status', 'ready')
+            ->with(['storageFile', 'folder']);
+
+        $this->applyFilters($query, $filters);
+
+        return $query->orderByDesc('created_at')->paginate($perPage);
+    }
+
+    /**
+     * List folders that have at least one ready footage (for customer browse).
+     */
+    public function listFoldersWithBrowseContent(): Collection
+    {
+        return FootageFolder::query()
+            ->whereHas('footage', fn ($q) => $q->where('status', 'ready'))
+            ->with(['parent', 'children'])
+            ->withCount(['footage' => fn ($q) => $q->where('status', 'ready')])
+            ->orderBy('path')
+            ->get();
     }
 
     /**

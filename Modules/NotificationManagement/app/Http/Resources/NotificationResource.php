@@ -23,6 +23,7 @@ class NotificationResource extends JsonResource
             'severity' => $this->severity,
             'created_by_user_id' => $this->created_by_user_id,
             'created_at' => optional($this->created_at)->toISOString(),
+            'url' => $this->resource->getUrl(),
         ];
     }
 }

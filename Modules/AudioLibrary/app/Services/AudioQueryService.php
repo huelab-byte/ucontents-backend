@@ -6,7 +6,9 @@ namespace Modules\AudioLibrary\Services;
 
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Modules\AudioLibrary\Models\Audio;
+use Modules\AudioLibrary\Models\AudioFolder;
 
 /**
  * Service for building audio queries with filters
@@ -36,6 +38,32 @@ class AudioQueryService
         $this->applyFilters($query, $filters);
 
         return $query->orderByDesc('created_at')->paginate($perPage);
+    }
+
+    /**
+     * List customer-visible (shared) audio for browse/use (read-only). Returns ready items only.
+     */
+    public function listCustomerVisibleWithFilters(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        $query = Audio::where('status', 'ready')
+            ->with(['storageFile', 'folder']);
+
+        $this->applyFilters($query, $filters);
+
+        return $query->orderByDesc('created_at')->paginate($perPage);
+    }
+
+    /**
+     * List folders that have at least one ready audio (for customer browse).
+     */
+    public function listFoldersWithBrowseContent(): Collection
+    {
+        return AudioFolder::query()
+            ->whereHas('audio', fn ($q) => $q->where('status', 'ready'))
+            ->with(['parent', 'children'])
+            ->withCount(['audio as audio_count' => fn ($q) => $q->where('status', 'ready')])
+            ->orderBy('path')
+            ->get();
     }
 
     /**

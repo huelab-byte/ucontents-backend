@@ -49,6 +49,17 @@ Route::prefix('v1')->group(function () {
                 ->name('customer.audio-library.bulk-upload')
                 ->middleware('permission:bulk_upload_audio');
             
+            // Browse shared library (read-only; use_audio_library)
+            Route::get('audio-library/browse/folders', [\Modules\AudioLibrary\Http\Controllers\Api\V1\Customer\AudioLibraryController::class, 'browseFolders'])
+                ->name('customer.audio-library.browse.folders')
+                ->middleware('permission:use_audio_library');
+            Route::get('audio-library/browse', [\Modules\AudioLibrary\Http\Controllers\Api\V1\Customer\AudioLibraryController::class, 'browseIndex'])
+                ->name('customer.audio-library.browse')
+                ->middleware('permission:use_audio_library');
+            Route::get('audio-library/browse/{id}', [\Modules\AudioLibrary\Http\Controllers\Api\V1\Customer\AudioLibraryController::class, 'browseShow'])
+                ->name('customer.audio-library.browse.show')
+                ->middleware('permission:use_audio_library');
+
             Route::get('audio-library/audio', [\Modules\AudioLibrary\Http\Controllers\Api\V1\Customer\AudioLibraryController::class, 'index'])
                 ->name('customer.audio-library.audio')
                 ->middleware('permission:view_audio');

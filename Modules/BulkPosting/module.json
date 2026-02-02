@@ -1,0 +1,11 @@
+{
+    "name": "BulkPosting",
+    "alias": "bulkposting",
+    "description": "Social media auto-posting scheduler with campaign management",
+    "keywords": ["bulk", "posting", "scheduler", "social media", "automation"],
+    "priority": 0,
+    "providers": [
+        "Modules\\BulkPosting\\Providers\\BulkPostingServiceProvider"
+    ],
+    "files": []
+}

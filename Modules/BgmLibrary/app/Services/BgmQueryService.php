@@ -6,7 +6,9 @@ namespace Modules\BgmLibrary\Services;
 
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Modules\BgmLibrary\Models\Bgm;
+use Modules\BgmLibrary\Models\BgmFolder;
 
 /**
  * Service for building BGM queries with filters
@@ -36,6 +38,32 @@ class BgmQueryService
         $this->applyFilters($query, $filters);
 
         return $query->orderByDesc('created_at')->paginate($perPage);
+    }
+
+    /**
+     * List customer-visible (shared) BGM for browse/use (read-only). Returns ready items only.
+     */
+    public function listCustomerVisibleWithFilters(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        $query = Bgm::where('status', 'ready')
+            ->with(['storageFile', 'folder']);
+
+        $this->applyFilters($query, $filters);
+
+        return $query->orderByDesc('created_at')->paginate($perPage);
+    }
+
+    /**
+     * List folders that have at least one ready BGM (for customer browse).
+     */
+    public function listFoldersWithBrowseContent(): Collection
+    {
+        return BgmFolder::query()
+            ->whereHas('bgm', fn ($q) => $q->where('status', 'ready'))
+            ->with(['parent', 'children'])
+            ->withCount(['bgm' => fn ($q) => $q->where('status', 'ready')])
+            ->orderBy('path')
+            ->get();
     }
 
     /**

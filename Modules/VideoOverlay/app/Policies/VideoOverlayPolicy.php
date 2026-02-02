@@ -18,7 +18,7 @@ class VideoOverlayPolicy
         if ($user->isAdmin()) {
             return $user->hasPermission('view_all_video_overlay');
         }
-        return $user->hasPermission('view_video_overlay');
+        return $user->hasPermission('view_video_overlay') || $user->hasPermission('use_video_overlay');
     }
 
     /**
@@ -29,7 +29,10 @@ class VideoOverlayPolicy
         if ($user->isAdmin()) {
             return $user->hasPermission('view_all_video_overlay');
         }
-        return $videoOverlay->user_id === $user->id && $user->hasPermission('view_video_overlay');
+        if ($videoOverlay->user_id === $user->id && $user->hasPermission('view_video_overlay')) {
+            return true;
+        }
+        return $user->hasPermission('use_video_overlay') && $videoOverlay->status === 'ready';
     }
 
     /**

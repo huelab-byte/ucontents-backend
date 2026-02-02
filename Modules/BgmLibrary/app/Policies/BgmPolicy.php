@@ -17,7 +17,7 @@ class BgmPolicy
         if ($user->isAdmin()) {
             return $user->hasPermission('view_all_bgm');
         }
-        return $user->hasPermission('view_bgm');
+        return $user->hasPermission('view_bgm') || $user->hasPermission('use_bgm_library');
     }
 
     /**
@@ -28,7 +28,10 @@ class BgmPolicy
         if ($user->isAdmin()) {
             return $user->hasPermission('view_all_bgm');
         }
-        return $bgm->user_id === $user->id && $user->hasPermission('view_bgm');
+        if ($bgm->user_id === $user->id && $user->hasPermission('view_bgm')) {
+            return true;
+        }
+        return $user->hasPermission('use_bgm_library') && $bgm->status === 'ready';
     }
 
     /**

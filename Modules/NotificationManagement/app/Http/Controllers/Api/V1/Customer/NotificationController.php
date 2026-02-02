@@ -7,6 +7,8 @@ namespace Modules\NotificationManagement\Http\Controllers\Api\V1\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Core\Http\Controllers\Api\BaseApiController;
+use Modules\NotificationManagement\Actions\ClearAllNotificationsAction;
+use Modules\NotificationManagement\Actions\MarkAllNotificationsReadAction;
 use Modules\NotificationManagement\Actions\MarkNotificationReadAction;
 use Modules\NotificationManagement\Http\Requests\MarkNotificationReadRequest;
 use Modules\NotificationManagement\Http\Resources\NotificationRecipientResource;
@@ -44,6 +46,26 @@ class NotificationController extends BaseApiController
         $updated = $action->execute($recipient);
 
         return $this->success(new NotificationRecipientResource($updated->loadMissing('notification')), 'Notification marked as read');
+    }
+
+    public function markAllRead(Request $request, MarkAllNotificationsReadAction $action): JsonResponse
+    {
+        $userId = (int) $request->user()->id;
+        $markedCount = $action->execute($userId);
+
+        return $this->success([
+            'marked_count' => $markedCount,
+        ], 'All notifications marked as read');
+    }
+
+    public function clearAll(Request $request, ClearAllNotificationsAction $action): JsonResponse
+    {
+        $userId = (int) $request->user()->id;
+        $deletedCount = $action->execute($userId);
+
+        return $this->success([
+            'deleted_count' => $deletedCount,
+        ], 'All notifications cleared');
     }
 }
 

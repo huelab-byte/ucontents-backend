@@ -146,30 +146,50 @@ class UserManagementSeeder extends Seeder
                     'manage_payment_gateways',
                     'view_invoice_templates',
                     'manage_invoice_templates',
-                    // Footage Library
+                    // Footage Library (admin full access)
+                    'upload_footage',
+                    'bulk_upload_footage',
                     'view_footage_library',
                     'manage_footage_library',
-                    // Audio Library
+                    'manage_footage_folders',
+                    'view_all_footage',
+                    'view_footage_stats',
+                    'delete_any_footage',
+                    // Audio Library (admin full access)
+                    'upload_audio',
+                    'bulk_upload_audio',
                     'view_audio_library',
                     'manage_audio_library',
+                    'manage_audio_folders',
                     'view_all_audio',
                     'view_audio_stats',
                     'delete_any_audio',
-                    // Image Library
+                    // Image Library (admin full access)
+                    'upload_image',
+                    'bulk_upload_image',
                     'view_image_library',
                     'manage_image_library',
+                    'manage_image_folders',
                     'view_all_image',
                     'view_image_stats',
                     'delete_any_image',
-                    // BGM Library
+                    // BGM Library (admin full access)
+                    'upload_bgm',
+                    'bulk_upload_bgm',
+                    'manage_bgm_folders',
                     'view_all_bgm',
                     'view_bgm_stats',
                     'delete_any_bgm',
-                    // Video Overlay
+                    // Video Overlay (admin full access)
+                    'upload_video_overlay',
+                    'manage_video_overlay_folders',
                     'view_all_video_overlay',
                     'view_video_overlay_stats',
                     'delete_any_video_overlay',
-                    // Image Overlay
+                    // Image Overlay (admin full access)
+                    'upload_image_overlay',
+                    'bulk_upload_image_overlay',
+                    'manage_image_overlay_folders',
                     'view_all_image_overlay',
                     'view_image_overlay_stats',
                     'delete_any_image_overlay',
@@ -207,6 +227,13 @@ class UserManagementSeeder extends Seeder
                     'edit_own_profile',
                     'call_ai_models',
                     'use_prompt_templates',
+                    // Library & Overlay – browse shared (read-only)
+                    'use_audio_library',
+                    'use_image_library',
+                    'use_footage_library',
+                    'use_bgm_library',
+                    'use_video_overlay',
+                    'use_image_overlay',
                 ],
             ],
             [
@@ -223,10 +250,26 @@ class UserManagementSeeder extends Seeder
             $permissions = $roleData['permissions'];
             unset($roleData['permissions']);
 
-            $role = Role::firstOrCreate(
-                ['slug' => $roleData['slug']],
-                $roleData
-            );
+            // Check if role exists by slug OR name (including soft-deleted) to avoid unique constraint violations
+            $role = Role::withTrashed()
+                ->where('slug', $roleData['slug'])
+                ->orWhere('name', $roleData['name'])
+                ->first();
+
+            if (!$role) {
+                $role = Role::create($roleData);
+            } else {
+                // Restore if soft-deleted
+                if ($role->trashed()) {
+                    $role->restore();
+                }
+                // Update existing role with new data (except slug to preserve existing relationships)
+                $role->update([
+                    'description' => $roleData['description'],
+                    'hierarchy' => $roleData['hierarchy'],
+                    'is_system' => $roleData['is_system'],
+                ]);
+            }
 
             // Assign permissions
             if (!empty($permissions)) {
@@ -307,16 +350,20 @@ class UserManagementSeeder extends Seeder
             $roles = $userData['roles'];
             unset($userData['roles']);
 
-            $user = User::firstOrCreate(
-                ['email' => $userData['email']],
-                [
+            // Check if user exists to avoid unique constraint violations
+            $user = User::where('email', $userData['email'])->first();
+
+            if (!$user) {
+                $user = User::create([
                     'name' => $userData['name'],
+                    'email' => $userData['email'],
                     'password' => Hash::make($userData['password']),
                     'status' => $userData['status'],
                     'is_system' => $userData['is_system'],
                     'email_verified_at' => $userData['email_verified_at'],
-                ]
-            );
+                ]);
+            }
+            // Don't update existing users to preserve their data
 
             // Assign roles
             $roleIds = Role::whereIn('slug', $roles)->pluck('id')->toArray();
@@ -426,8 +473,60 @@ class UserManagementSeeder extends Seeder
         }
 
         // Footage Library
-        if (in_array($slug, ['view_footage_library', 'manage_footage_library'])) {
-            return 'Footage Library';
+        if (in_array($slug, [
+            'upload_footage', 'bulk_upload_footage', 'view_footage', 'manage_footage',
+            'search_footage', 'manage_footage_folders', 'view_all_footage',
+            'delete_any_footage', 'view_footage_stats', 'view_footage_library',
+            'manage_footage_library', 'use_footage_library'
+        ])) {
+            return 'FootageLibrary';
+        }
+
+        // Audio Library
+        if (in_array($slug, [
+            'upload_audio', 'bulk_upload_audio', 'view_audio', 'manage_audio',
+            'manage_audio_folders', 'view_all_audio', 'delete_any_audio',
+            'view_audio_stats', 'view_audio_library', 'manage_audio_library',
+            'use_audio_library'
+        ])) {
+            return 'AudioLibrary';
+        }
+
+        // Image Library
+        if (in_array($slug, [
+            'upload_image', 'bulk_upload_image', 'view_image', 'manage_image',
+            'manage_image_folders', 'view_all_image', 'delete_any_image',
+            'view_image_stats', 'view_image_library', 'manage_image_library',
+            'use_image_library'
+        ])) {
+            return 'ImageLibrary';
+        }
+
+        // BGM Library
+        if (in_array($slug, [
+            'upload_bgm', 'bulk_upload_bgm', 'view_bgm', 'manage_bgm',
+            'manage_bgm_folders', 'view_all_bgm', 'delete_any_bgm',
+            'view_bgm_stats', 'use_bgm_library'
+        ])) {
+            return 'BgmLibrary';
+        }
+
+        // Video Overlay
+        if (in_array($slug, [
+            'upload_video_overlay', 'view_video_overlay', 'manage_video_overlay',
+            'manage_video_overlay_folders', 'view_all_video_overlay',
+            'delete_any_video_overlay', 'view_video_overlay_stats', 'use_video_overlay'
+        ])) {
+            return 'VideoOverlay';
+        }
+
+        // Image Overlay
+        if (in_array($slug, [
+            'upload_image_overlay', 'bulk_upload_image_overlay', 'view_image_overlay',
+            'manage_image_overlay', 'manage_image_overlay_folders', 'view_all_image_overlay',
+            'delete_any_image_overlay', 'view_image_overlay_stats', 'use_image_overlay'
+        ])) {
+            return 'ImageOverlay';
         }
 
         // Social Connection

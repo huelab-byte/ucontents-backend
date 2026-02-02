@@ -7,6 +7,7 @@ namespace Modules\SocialConnection\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Modules\UserManagement\Models\User;
 
 class SocialConnectionChannel extends Model
@@ -54,6 +55,19 @@ class SocialConnectionChannel extends Model
     public function group(): BelongsTo
     {
         return $this->belongsTo(SocialConnectionGroup::class, 'group_id');
+    }
+
+    /**
+     * Relationship with Proxies (through pivot table)
+     */
+    public function proxies(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            \Modules\ProxySetup\Models\Proxy::class,
+            'proxy_channel_assignments',
+            'social_connection_channel_id',
+            'proxy_id'
+        )->withTimestamps();
     }
 }
 

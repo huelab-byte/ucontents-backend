@@ -40,6 +40,17 @@ Route::prefix('v1')->group(function () {
             'module.feature:BgmLibrary',
         ])
         ->group(function () {
+            // Browse shared library (read-only; use_bgm_library)
+            Route::get('bgm-library/browse/folders', [\Modules\BgmLibrary\Http\Controllers\Api\V1\Customer\BgmLibraryController::class, 'browseFolders'])
+                ->name('customer.bgm-library.browse.folders')
+                ->middleware('permission:use_bgm_library');
+            Route::get('bgm-library/browse', [\Modules\BgmLibrary\Http\Controllers\Api\V1\Customer\BgmLibraryController::class, 'browseIndex'])
+                ->name('customer.bgm-library.browse')
+                ->middleware('permission:use_bgm_library');
+            Route::get('bgm-library/browse/{id}', [\Modules\BgmLibrary\Http\Controllers\Api\V1\Customer\BgmLibraryController::class, 'browseShow'])
+                ->name('customer.bgm-library.browse.show')
+                ->middleware('permission:use_bgm_library');
+
             // BGM operations
             Route::post('bgm-library/upload', [\Modules\BgmLibrary\Http\Controllers\Api\V1\Customer\BgmLibraryController::class, 'upload'])
                 ->name('customer.bgm-library.upload')

@@ -16,5 +16,9 @@
     "ImageLibrary": true,
     "VideoOverlay": true,
     "BgmLibrary": true,
-    "ImageOverlay": true
+    "ImageOverlay": true,
+    "PlanManagement": true,
+    "MediaUpload": true,
+    "ProxySetup": true,
+    "BulkPosting": true
 }

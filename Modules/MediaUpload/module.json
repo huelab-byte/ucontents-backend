@@ -1,0 +1,11 @@
+{
+    "name": "MediaUpload",
+    "alias": "mediaupload",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\MediaUpload\\Providers\\MediaUploadServiceProvider"
+    ],
+    "files": []
+}

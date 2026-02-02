@@ -120,6 +120,54 @@ class FootageLibraryController extends BaseApiController
     }
 
     /**
+     * List folders that have browse-visible (ready) footage. For customers with use_footage_library.
+     */
+    public function browseFolders(): JsonResponse
+    {
+        if (! auth()->user()->hasPermission('use_footage_library')) {
+            abort(403, 'You do not have permission to browse the shared footage library.');
+        }
+
+        $folders = $this->queryService->listFoldersWithBrowseContent();
+
+        return $this->success(FolderResource::collection($folders), 'Folders retrieved successfully');
+    }
+
+    /**
+     * Browse shared footage (read-only). For customers with use_footage_library.
+     */
+    public function browseIndex(ListFootageRequest $request): JsonResponse
+    {
+        if (! auth()->user()->hasPermission('use_footage_library')) {
+            abort(403, 'You do not have permission to browse the shared footage library.');
+        }
+
+        $filters = $request->only(['folder_id', 'status', 'orientation']);
+        $filters['status'] = 'ready';
+        $perPage = (int) $request->input('per_page', 15);
+
+        $footage = $this->queryService->listCustomerVisibleWithFilters($filters, $perPage);
+
+        return $this->paginatedResource($footage, FootageResource::class, 'Shared footage retrieved successfully');
+    }
+
+    /**
+     * Show single shared footage (browse).
+     */
+    public function browseShow(int $id): JsonResponse
+    {
+        $footage = Footage::with(['storageFile', 'folder'])->findOrFail($id);
+        if (! auth()->user()->hasPermission('use_footage_library')) {
+            abort(403, 'You do not have permission to browse the shared footage library.');
+        }
+        if ($footage->status !== 'ready') {
+            abort(404);
+        }
+
+        return $this->success(new FootageResource($footage), 'Footage retrieved successfully');
+    }
+
+    /**
      * Show single footage
      */
     public function show(int $id): JsonResponse

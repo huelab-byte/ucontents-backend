@@ -108,6 +108,54 @@ class BgmLibraryController extends BaseApiController
     }
 
     /**
+     * List folders that have browse-visible (ready) BGM. For customers with use_bgm_library.
+     */
+    public function browseFolders(): JsonResponse
+    {
+        if (! auth()->user()->hasPermission('use_bgm_library')) {
+            abort(403, 'You do not have permission to browse the shared BGM library.');
+        }
+
+        $folders = $this->queryService->listFoldersWithBrowseContent();
+
+        return $this->success(FolderResource::collection($folders), 'Folders retrieved successfully');
+    }
+
+    /**
+     * Browse shared BGM (read-only). For customers with use_bgm_library.
+     */
+    public function browseIndex(ListBgmRequest $request): JsonResponse
+    {
+        if (! auth()->user()->hasPermission('use_bgm_library')) {
+            abort(403, 'You do not have permission to browse the shared BGM library.');
+        }
+
+        $filters = $request->only(['folder_id', 'status']);
+        $filters['status'] = 'ready';
+        $perPage = (int) $request->input('per_page', 15);
+
+        $bgm = $this->queryService->listCustomerVisibleWithFilters($filters, $perPage);
+
+        return $this->paginatedResource($bgm, BgmResource::class, 'Shared BGM retrieved successfully');
+    }
+
+    /**
+     * Show single shared BGM (browse).
+     */
+    public function browseShow(int $id): JsonResponse
+    {
+        $bgm = Bgm::with(['storageFile', 'folder'])->findOrFail($id);
+        if (! auth()->user()->hasPermission('use_bgm_library')) {
+            abort(403, 'You do not have permission to browse the shared BGM library.');
+        }
+        if ($bgm->status !== 'ready') {
+            abort(404);
+        }
+
+        return $this->success(new BgmResource($bgm), 'BGM retrieved successfully');
+    }
+
+    /**
      * Show single BGM
      */
     public function show(int $id): JsonResponse

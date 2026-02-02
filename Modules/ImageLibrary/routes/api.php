@@ -40,6 +40,17 @@ Route::prefix('v1')->group(function () {
             'module.feature:ImageLibrary',
         ])
         ->group(function () {
+            // Browse shared library (read-only; use_image_library)
+            Route::get('image-library/browse/folders', [\Modules\ImageLibrary\Http\Controllers\Api\V1\Customer\ImageLibraryController::class, 'browseFolders'])
+                ->name('customer.image-library.browse.folders')
+                ->middleware('permission:use_image_library');
+            Route::get('image-library/browse', [\Modules\ImageLibrary\Http\Controllers\Api\V1\Customer\ImageLibraryController::class, 'browseIndex'])
+                ->name('customer.image-library.browse')
+                ->middleware('permission:use_image_library');
+            Route::get('image-library/browse/{id}', [\Modules\ImageLibrary\Http\Controllers\Api\V1\Customer\ImageLibraryController::class, 'browseShow'])
+                ->name('customer.image-library.browse.show')
+                ->middleware('permission:use_image_library');
+
             // Image operations
             Route::post('image-library/upload', [\Modules\ImageLibrary\Http\Controllers\Api\V1\Customer\ImageLibraryController::class, 'upload'])
                 ->name('customer.image-library.upload')

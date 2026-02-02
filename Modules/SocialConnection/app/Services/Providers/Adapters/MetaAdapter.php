@@ -28,15 +28,21 @@ class MetaAdapter implements ProviderAdapterInterface
         ]]);
 
         $scopes = $app->scopes ?: [
-            // Similar to sentosh-smm defaults for listing pages + IG business accounts.
-            // Exact permissions still depend on Meta app review.
+            // Core permissions
             'public_profile',
             'email',
+            // Page permissions
             'pages_show_list',
             'pages_read_engagement',
-            'business_management',
+            'pages_manage_posts',      // Required for posting to pages
+            'pages_read_user_content',
+            // Instagram permissions
             'instagram_basic',
             'instagram_manage_insights',
+            'instagram_content_publish', // Required for posting to Instagram
+            // Business management
+            'business_management',
+            // Note: These permissions require Meta App Review for production use
         ];
 
         return Socialite::driver('facebook')

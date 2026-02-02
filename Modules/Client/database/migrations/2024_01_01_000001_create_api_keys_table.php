@@ -13,6 +13,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Idempotent: skip if table already exists
+        if (Schema::hasTable('api_keys')) {
+            return;
+        }
+
         Schema::create('api_keys', function (Blueprint $table) {
             $table->id();
             $table->foreignId('api_client_id')->constrained('api_clients')->cascadeOnDelete();

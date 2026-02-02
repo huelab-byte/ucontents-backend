@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Modules\VideoOverlay\Services;
 
 use Modules\VideoOverlay\Models\VideoOverlay;
+use Modules\VideoOverlay\Models\VideoOverlayFolder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 class VideoOverlayQueryService
 {
@@ -60,6 +62,39 @@ class VideoOverlayQueryService
         }
 
         return $query->paginate($perPage);
+    }
+
+    /**
+     * List customer-visible (shared) video overlays for browse/use (read-only). Returns ready items only.
+     */
+    public function listCustomerVisibleWithFilters(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        $query = VideoOverlay::where('status', 'ready')
+            ->with(['storageFile', 'folder'])
+            ->orderBy('created_at', 'desc');
+
+        if (isset($filters['folder_id'])) {
+            $query->where('folder_id', $filters['folder_id']);
+        }
+
+        if (isset($filters['orientation'])) {
+            $query->whereJsonContains('metadata->orientation', $filters['orientation']);
+        }
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * List folders that have at least one ready video overlay (for customer browse).
+     */
+    public function listFoldersWithBrowseContent(): Collection
+    {
+        return VideoOverlayFolder::query()
+            ->whereHas('videoOverlays', fn ($q) => $q->where('status', 'ready'))
+            ->with(['parent', 'children'])
+            ->withCount(['videoOverlays' => fn ($q) => $q->where('status', 'ready')])
+            ->orderBy('path')
+            ->get();
     }
 
     /**

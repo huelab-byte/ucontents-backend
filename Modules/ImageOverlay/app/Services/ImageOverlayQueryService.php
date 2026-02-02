@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Modules\ImageOverlay\Services;
 
 use Modules\ImageOverlay\Models\ImageOverlay;
+use Modules\ImageOverlay\Models\ImageOverlayFolder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ImageOverlayQueryService
@@ -46,6 +48,33 @@ class ImageOverlayQueryService
 
         if (isset($filters['status'])) {
             $query->where('status', $filters['status']);
+        }
+
+        return $query->orderBy('created_at', 'desc')->paginate($perPage);
+    }
+
+    /**
+     * List folders that have at least one ready image overlay (for customer browse).
+     */
+    public function listFoldersWithBrowseContent(): Collection
+    {
+        return ImageOverlayFolder::query()
+            ->whereHas('imageOverlays', fn ($q) => $q->where('status', 'ready'))
+            ->withCount(['imageOverlays as image_overlays_count' => fn ($q) => $q->where('status', 'ready')])
+            ->orderBy('path')
+            ->get();
+    }
+
+    /**
+     * List customer-visible (shared) image overlays for browse/use (read-only). Returns ready items only.
+     */
+    public function listCustomerVisibleWithFilters(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        $query = ImageOverlay::with(['storageFile', 'folder'])
+            ->where('status', 'ready');
+
+        if (isset($filters['folder_id'])) {
+            $query->where('folder_id', $filters['folder_id']);
         }
 
         return $query->orderBy('created_at', 'desc')->paginate($perPage);

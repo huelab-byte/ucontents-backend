@@ -108,6 +108,54 @@ class ImageOverlayController extends BaseApiController
     }
 
     /**
+     * List folders that have browse-visible (ready) image overlays. For customers with use_image_overlay.
+     */
+    public function browseFolders(): JsonResponse
+    {
+        if (! auth()->user()->hasPermission('use_image_overlay')) {
+            abort(403, 'You do not have permission to browse image overlays.');
+        }
+
+        $folders = $this->queryService->listFoldersWithBrowseContent();
+
+        return $this->success(FolderResource::collection($folders), 'Folders retrieved successfully');
+    }
+
+    /**
+     * Browse image overlays (read-only). For customers with use_image_overlay.
+     */
+    public function browseIndex(ListImageOverlayRequest $request): JsonResponse
+    {
+        if (! auth()->user()->hasPermission('use_image_overlay')) {
+            abort(403, 'You do not have permission to browse image overlays.');
+        }
+
+        $filters = $request->only(['folder_id', 'status']);
+        $filters['status'] = 'ready';
+        $perPage = (int) $request->input('per_page', 15);
+
+        $imageOverlays = $this->queryService->listCustomerVisibleWithFilters($filters, $perPage);
+
+        return $this->paginatedResource($imageOverlays, ImageOverlayResource::class, 'Image overlays retrieved successfully');
+    }
+
+    /**
+     * Show single shared image overlay (browse).
+     */
+    public function browseShow(int $id): JsonResponse
+    {
+        $imageOverlay = ImageOverlay::with(['storageFile', 'folder'])->findOrFail($id);
+        if (! auth()->user()->hasPermission('use_image_overlay')) {
+            abort(403, 'You do not have permission to browse image overlays.');
+        }
+        if ($imageOverlay->status !== 'ready') {
+            abort(404);
+        }
+
+        return $this->success(new ImageOverlayResource($imageOverlay), 'Image overlay retrieved successfully');
+    }
+
+    /**
      * Show single image overlay
      */
     public function show(int $id): JsonResponse

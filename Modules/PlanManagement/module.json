@@ -1,0 +1,11 @@
+{
+    "name": "PlanManagement",
+    "alias": "planmanagement",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\PlanManagement\\Providers\\PlanManagementServiceProvider"
+    ],
+    "files": []
+}

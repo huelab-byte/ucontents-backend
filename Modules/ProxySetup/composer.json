@@ -1,0 +1,23 @@
+{
+    "name": "nwidart/proxysetup",
+    "description": "Proxy management module for social media automation",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {}
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\ProxySetup\\": "app/",
+            "Modules\\ProxySetup\\Database\\Factories\\": "database/factories/",
+            "Modules\\ProxySetup\\Database\\Seeders\\": "database/seeders/"
+        }
+    }
+}

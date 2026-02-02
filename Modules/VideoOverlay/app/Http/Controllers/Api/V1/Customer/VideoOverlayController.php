@@ -80,6 +80,54 @@ class VideoOverlayController extends BaseApiController
     }
 
     /**
+     * List folders that have browse-visible (ready) video overlays. For customers with use_video_overlay.
+     */
+    public function browseFolders(): JsonResponse
+    {
+        if (! auth()->user()->hasPermission('use_video_overlay')) {
+            abort(403, 'You do not have permission to browse the shared video overlays.');
+        }
+
+        $folders = $this->queryService->listFoldersWithBrowseContent();
+
+        return $this->success(FolderResource::collection($folders), 'Folders retrieved successfully');
+    }
+
+    /**
+     * Browse shared video overlays (read-only). For customers with use_video_overlay.
+     */
+    public function browseIndex(ListVideoOverlayRequest $request): JsonResponse
+    {
+        if (! auth()->user()->hasPermission('use_video_overlay')) {
+            abort(403, 'You do not have permission to browse the shared video overlays.');
+        }
+
+        $filters = $request->only(['folder_id', 'status', 'orientation']);
+        $filters['status'] = 'ready';
+        $perPage = (int) $request->input('per_page', 15);
+
+        $videoOverlays = $this->queryService->listCustomerVisibleWithFilters($filters, $perPage);
+
+        return $this->paginatedResource($videoOverlays, VideoOverlayResource::class, 'Shared video overlays retrieved successfully');
+    }
+
+    /**
+     * Show single shared video overlay (browse).
+     */
+    public function browseShow(int $id): JsonResponse
+    {
+        $videoOverlay = VideoOverlay::with(['storageFile', 'folder'])->findOrFail($id);
+        if (! auth()->user()->hasPermission('use_video_overlay')) {
+            abort(403, 'You do not have permission to browse the shared video overlays.');
+        }
+        if ($videoOverlay->status !== 'ready') {
+            abort(404);
+        }
+
+        return $this->success(new VideoOverlayResource($videoOverlay), 'Video overlay retrieved successfully');
+    }
+
+    /**
      * Show single video overlay
      */
     public function show(int $id): JsonResponse

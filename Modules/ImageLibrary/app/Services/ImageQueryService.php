@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Modules\ImageLibrary\Services;
 
 use Modules\ImageLibrary\Models\Image;
+use Modules\ImageLibrary\Models\ImageFolder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ImageQueryService
@@ -49,6 +51,34 @@ class ImageQueryService
         }
 
         return $query->orderBy('created_at', 'desc')->paginate($perPage);
+    }
+
+    /**
+     * List customer-visible (shared) images for browse/use (read-only). Returns ready items only.
+     */
+    public function listCustomerVisibleWithFilters(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        $query = Image::with(['storageFile', 'folder'])
+            ->where('status', 'ready');
+
+        if (isset($filters['folder_id'])) {
+            $query->where('folder_id', $filters['folder_id']);
+        }
+
+        return $query->orderBy('created_at', 'desc')->paginate($perPage);
+    }
+
+    /**
+     * List folders that have at least one ready image (for customer browse).
+     */
+    public function listFoldersWithBrowseContent(): Collection
+    {
+        return ImageFolder::query()
+            ->whereHas('images', fn ($q) => $q->where('status', 'ready'))
+            ->with(['parent', 'children'])
+            ->withCount(['images as images_count' => fn ($q) => $q->where('status', 'ready')])
+            ->orderBy('path')
+            ->get();
     }
 
     /**

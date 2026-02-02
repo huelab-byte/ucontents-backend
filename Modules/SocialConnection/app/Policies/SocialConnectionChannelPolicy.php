@@ -15,6 +15,12 @@ class SocialConnectionChannelPolicy
         return true;
     }
 
+    public function create(User $user): bool
+    {
+        // Any authenticated user can connect a new channel (OAuth redirect).
+        return true;
+    }
+
     public function view(User $user, SocialConnectionChannel $channel): bool
     {
         return $channel->user_id === $user->id;

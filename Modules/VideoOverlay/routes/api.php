@@ -40,6 +40,17 @@ Route::prefix('v1')->group(function () {
             'module.feature:VideoOverlay',
         ])
         ->group(function () {
+            // Browse shared overlays (read-only; use_video_overlay)
+            Route::get('video-overlay/browse/folders', [\Modules\VideoOverlay\Http\Controllers\Api\V1\Customer\VideoOverlayController::class, 'browseFolders'])
+                ->name('customer.video-overlay.browse.folders')
+                ->middleware('permission:use_video_overlay');
+            Route::get('video-overlay/browse', [\Modules\VideoOverlay\Http\Controllers\Api\V1\Customer\VideoOverlayController::class, 'browseIndex'])
+                ->name('customer.video-overlay.browse')
+                ->middleware('permission:use_video_overlay');
+            Route::get('video-overlay/browse/{id}', [\Modules\VideoOverlay\Http\Controllers\Api\V1\Customer\VideoOverlayController::class, 'browseShow'])
+                ->name('customer.video-overlay.browse.show')
+                ->middleware('permission:use_video_overlay');
+
             // Video overlay operations
             Route::post('video-overlay/upload', [\Modules\VideoOverlay\Http\Controllers\Api\V1\Customer\VideoOverlayController::class, 'upload'])
                 ->name('customer.video-overlay.upload')

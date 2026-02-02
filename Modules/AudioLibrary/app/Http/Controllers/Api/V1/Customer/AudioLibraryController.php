@@ -93,7 +93,7 @@ class AudioLibraryController extends BaseApiController
     }
 
     /**
-     * List audio
+     * List audio (own items)
      */
     public function index(ListAudioRequest $request): JsonResponse
     {
@@ -105,6 +105,54 @@ class AudioLibraryController extends BaseApiController
         $audio = $this->queryService->listForUserWithFilters(auth()->id(), $filters, $perPage);
 
         return $this->paginatedResource($audio, AudioResource::class, 'Audio retrieved successfully');
+    }
+
+    /**
+     * List folders that have browse-visible (ready) audio. For customers with use_audio_library.
+     */
+    public function browseFolders(): JsonResponse
+    {
+        if (! auth()->user()->hasPermission('use_audio_library')) {
+            abort(403, 'You do not have permission to browse the shared audio library.');
+        }
+
+        $folders = $this->queryService->listFoldersWithBrowseContent();
+
+        return $this->success(FolderResource::collection($folders), 'Folders retrieved successfully');
+    }
+
+    /**
+     * Browse shared audio (read-only). For customers with use_audio_library.
+     */
+    public function browseIndex(ListAudioRequest $request): JsonResponse
+    {
+        if (! auth()->user()->hasPermission('use_audio_library')) {
+            abort(403, 'You do not have permission to browse the shared audio library.');
+        }
+
+        $filters = $request->only(['folder_id', 'status']);
+        $filters['status'] = 'ready';
+        $perPage = (int) $request->input('per_page', 15);
+
+        $audio = $this->queryService->listCustomerVisibleWithFilters($filters, $perPage);
+
+        return $this->paginatedResource($audio, AudioResource::class, 'Shared audio retrieved successfully');
+    }
+
+    /**
+     * Show single shared audio (browse).
+     */
+    public function browseShow(int $id): JsonResponse
+    {
+        $audio = Audio::with(['storageFile', 'folder'])->findOrFail($id);
+        if (! auth()->user()->hasPermission('use_audio_library')) {
+            abort(403, 'You do not have permission to browse the shared audio library.');
+        }
+        if ($audio->status !== 'ready') {
+            abort(404);
+        }
+
+        return $this->success(new AudioResource($audio), 'Audio retrieved successfully');
     }
 
     /**

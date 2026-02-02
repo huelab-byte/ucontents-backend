@@ -40,6 +40,17 @@ Route::prefix('v1')->group(function () {
             'module.feature:FootageLibrary',
         ])
         ->group(function () {
+            // Browse shared library (read-only; use_footage_library)
+            Route::get('footage-library/browse/folders', [\Modules\FootageLibrary\Http\Controllers\Api\V1\Customer\FootageLibraryController::class, 'browseFolders'])
+                ->name('customer.footage-library.browse.folders')
+                ->middleware('permission:use_footage_library');
+            Route::get('footage-library/browse', [\Modules\FootageLibrary\Http\Controllers\Api\V1\Customer\FootageLibraryController::class, 'browseIndex'])
+                ->name('customer.footage-library.browse')
+                ->middleware('permission:use_footage_library');
+            Route::get('footage-library/browse/{id}', [\Modules\FootageLibrary\Http\Controllers\Api\V1\Customer\FootageLibraryController::class, 'browseShow'])
+                ->name('customer.footage-library.browse.show')
+                ->middleware('permission:use_footage_library');
+
             // Footage operations
             Route::post('footage-library/upload', [\Modules\FootageLibrary\Http\Controllers\Api\V1\Customer\FootageLibraryController::class, 'upload'])
                 ->name('customer.footage-library.upload')

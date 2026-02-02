@@ -13,6 +13,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Idempotent: skip if table already exists
+        if (Schema::hasTable('magic_link_tokens')) {
+            return;
+        }
+
         Schema::create('magic_link_tokens', function (Blueprint $table) {
             $table->id();
             $table->string('email')->index();

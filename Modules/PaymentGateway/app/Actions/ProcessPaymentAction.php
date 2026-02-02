@@ -87,6 +87,7 @@ class ProcessPaymentAction
                 $invoice->status = 'paid';
                 $invoice->paid_at = now();
                 $invoice->save();
+                \Modules\PaymentGateway\Events\InvoicePaid::dispatch($invoice);
             } elseif ($payment->status === 'pending' && isset($gatewayResponse['approval_url'])) {
                 // PayPal requires user approval - store approval URL
                 $payment->metadata = array_merge($payment->metadata ?? [], [

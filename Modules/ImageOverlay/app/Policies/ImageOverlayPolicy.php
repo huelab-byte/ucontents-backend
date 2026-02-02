@@ -15,7 +15,7 @@ class ImageOverlayPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermission('view_image_overlay') || $user->hasPermission('view_all_image_overlay');
+        return $user->hasPermission('view_image_overlay') || $user->hasPermission('view_all_image_overlay') || $user->hasPermission('use_image_overlay');
     }
 
     /**
@@ -27,7 +27,11 @@ class ImageOverlayPolicy
             return true;
         }
 
-        return $user->hasPermission('view_image_overlay') && $imageOverlay->user_id === $user->id;
+        if ($user->hasPermission('view_image_overlay') && $imageOverlay->user_id === $user->id) {
+            return true;
+        }
+
+        return $user->hasPermission('use_image_overlay') && $imageOverlay->status === 'ready';
     }
 
     /**

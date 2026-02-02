@@ -108,6 +108,54 @@ class ImageLibraryController extends BaseApiController
     }
 
     /**
+     * List folders that have browse-visible (ready) images. For customers with use_image_library.
+     */
+    public function browseFolders(): JsonResponse
+    {
+        if (! auth()->user()->hasPermission('use_image_library')) {
+            abort(403, 'You do not have permission to browse the shared image library.');
+        }
+
+        $folders = $this->queryService->listFoldersWithBrowseContent();
+
+        return $this->success(FolderResource::collection($folders), 'Folders retrieved successfully');
+    }
+
+    /**
+     * Browse shared images (read-only). For customers with use_image_library.
+     */
+    public function browseIndex(ListImagesRequest $request): JsonResponse
+    {
+        if (! auth()->user()->hasPermission('use_image_library')) {
+            abort(403, 'You do not have permission to browse the shared image library.');
+        }
+
+        $filters = $request->only(['folder_id', 'status']);
+        $filters['status'] = 'ready';
+        $perPage = (int) $request->input('per_page', 15);
+
+        $images = $this->queryService->listCustomerVisibleWithFilters($filters, $perPage);
+
+        return $this->paginatedResource($images, ImageResource::class, 'Shared images retrieved successfully');
+    }
+
+    /**
+     * Show single shared image (browse).
+     */
+    public function browseShow(int $id): JsonResponse
+    {
+        $image = Image::with(['storageFile', 'folder'])->findOrFail($id);
+        if (! auth()->user()->hasPermission('use_image_library')) {
+            abort(403, 'You do not have permission to browse the shared image library.');
+        }
+        if ($image->status !== 'ready') {
+            abort(404);
+        }
+
+        return $this->success(new ImageResource($image), 'Image retrieved successfully');
+    }
+
+    /**
      * Show single image
      */
     public function show(int $id): JsonResponse

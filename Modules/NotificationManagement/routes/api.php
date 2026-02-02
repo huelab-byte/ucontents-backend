@@ -66,6 +66,14 @@ Route::prefix('v1')->group(function () {
                 ->middleware('permission:view_notifications|manage_settings')
                 ->name('customer.notifications.unread-count');
 
+            Route::post('notifications/mark-all-read', [NotificationController::class, 'markAllRead'])
+                ->middleware('permission:view_notifications|manage_settings')
+                ->name('customer.notifications.mark-all-read');
+
+            Route::delete('notifications', [NotificationController::class, 'clearAll'])
+                ->middleware('permission:view_notifications|manage_settings')
+                ->name('customer.notifications.clear-all');
+
             Route::post('notifications/{recipient}/read', [NotificationController::class, 'markRead'])
                 ->middleware('permission:view_notifications|manage_settings')
                 ->name('customer.notifications.mark-read');

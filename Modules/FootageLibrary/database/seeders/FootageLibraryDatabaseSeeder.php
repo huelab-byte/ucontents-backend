@@ -27,6 +27,7 @@ class FootageLibraryDatabaseSeeder extends Seeder
             'view_footage_stats' => 'View footage statistics (admin)',
             'view_footage_library' => 'View footage library',
             'manage_footage_library' => 'Manage footage library',
+            'use_footage_library' => 'Browse and use shared footage library (read-only)',
         ];
 
         $permissionIds = [];

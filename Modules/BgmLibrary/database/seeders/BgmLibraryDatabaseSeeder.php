@@ -24,6 +24,7 @@ class BgmLibraryDatabaseSeeder extends Seeder
             'view_all_bgm' => 'View all BGM (admin)',
             'delete_any_bgm' => 'Delete any BGM (admin)',
             'view_bgm_stats' => 'View BGM statistics (admin)',
+            'use_bgm_library' => 'Browse and use shared BGM library (read-only)',
         ];
 
         $permissionIds = [];

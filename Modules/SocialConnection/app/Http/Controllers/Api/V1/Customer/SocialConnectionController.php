@@ -53,12 +53,21 @@ class SocialConnectionController extends BaseApiController
         $apps = SocialProviderApp::query()
             ->whereIn('provider', self::ALLOWED_PROVIDERS)
             ->orderBy('provider')
-            ->get(['provider', 'enabled', 'extra']);
+            ->get();
 
         // Meta can be "enabled" via sub-features (facebook/instagram) even if provider.enabled is false.
-        // Return only providers that are effectively enabled for customers.
+        // Meta is also shown when configured (has credentials) so customers can connect Facebook/Instagram.
+        // Other providers require enabled flag.
         $apps = $apps
-            ->filter(fn (SocialProviderApp $app) => $this->isProviderEnabledForCustomer($app))
+            ->filter(function (SocialProviderApp $app) {
+                if ($this->isProviderEnabledForCustomer($app)) {
+                    return true;
+                }
+                if ($app->provider === 'meta' && !empty($app->client_id) && !empty($app->client_secret)) {
+                    return true;
+                }
+                return false;
+            })
             ->values()
             ->map(fn (SocialProviderApp $app) => [
                 'provider' => $app->provider,
@@ -87,13 +96,28 @@ class SocialConnectionController extends BaseApiController
         }
 
         $app = SocialProviderApp::query()->where('provider', $provider)->first();
-        if (
-            !$app ||
-            !$this->isProviderEnabledForCustomer($app) ||
-            empty($app->client_id) ||
-            empty($app->client_secret)
-        ) {
-            return $this->error('Provider is not configured or enabled', 400);
+        if (!$app) {
+            return $this->error('Provider is not set up. An administrator can add it in Settings → Social Connection.', 400);
+        }
+        if (empty($app->client_id) || empty($app->client_secret)) {
+            return $this->error(
+                $provider === 'meta'
+                    ? 'Meta App ID or App Secret is missing. Please complete the configuration in Admin → Settings → Social Connection.'
+                    : 'Provider credentials are missing. Please complete the configuration in Admin → Settings → Social Connection.',
+                400
+            );
+        }
+        // Meta: allow redirect when app is configured (has credentials). Other providers require enabled flag.
+        $allowed = $provider === 'meta'
+            ? true
+            : $this->isProviderEnabledForCustomer($app);
+        if (!$allowed) {
+            return $this->error(
+                $provider === 'meta'
+                    ? 'Facebook/Instagram connection is disabled. An administrator can enable it in Settings → Social Connection.'
+                    : 'Provider is not enabled. An administrator can enable it in Settings → Social Connection.',
+                400
+            );
         }
 
         $callbackUrl = rtrim(config('app.url', env('APP_URL', 'http://localhost:8000')), '/')

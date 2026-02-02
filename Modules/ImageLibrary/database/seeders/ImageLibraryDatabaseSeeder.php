@@ -26,6 +26,7 @@ class ImageLibraryDatabaseSeeder extends Seeder
             'view_image_stats' => 'View image statistics (admin)',
             'view_image_library' => 'View image library',
             'manage_image_library' => 'Manage image library',
+            'use_image_library' => 'Browse and use shared image library (read-only)',
         ];
 
         $permissionIds = [];

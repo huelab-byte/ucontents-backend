@@ -97,15 +97,21 @@ class CheckPermission
                     'message' => 'You do not have permission to perform this action.',
                 ], 403);
             }
-            
+
+            $request->setUserResolver(function () use ($freshUser) {
+                return $freshUser;
+            });
             return $next($request);
         }
-        
+
         // OR logic (pipe-separated) - default behavior
         $permissionList = array_map('trim', explode('|', $permissions));
-        
+
         foreach ($permissionList as $permission) {
             if ($user->hasPermission(trim($permission))) {
+                $request->setUserResolver(function () use ($freshUser) {
+                    return $freshUser;
+                });
                 return $next($request);
             }
         }

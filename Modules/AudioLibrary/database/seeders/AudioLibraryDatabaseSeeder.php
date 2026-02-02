@@ -26,6 +26,7 @@ class AudioLibraryDatabaseSeeder extends Seeder
             'view_audio_stats' => 'View audio statistics (admin)',
             'view_audio_library' => 'View audio library',
             'manage_audio_library' => 'Manage audio library',
+            'use_audio_library' => 'Browse and use shared audio library (read-only)',
         ];
 
         $permissionIds = [];

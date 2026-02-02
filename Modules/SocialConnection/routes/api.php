@@ -14,7 +14,7 @@ Route::prefix('v1')->group(function () {
             'admin',
             \Modules\Authentication\Http\Middleware\RequireTwoFactorSetup::class,
             'module.feature:SocialConnection',
-            'permission:manage_social_providers',
+            'permission:manage_social_connection_providers',
         ])
         ->group(function () {
             Route::get('/providers', [ProviderAppController::class, 'index'])

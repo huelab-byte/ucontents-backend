@@ -42,6 +42,7 @@ class GeneralSettingsController extends BaseApiController
             'maintenance_mode' => $allSettings['maintenance_mode'] ?? false,
             'terms_of_service_url' => $allSettings['terms_of_service_url'] ?? '',
             'privacy_policy_url' => $allSettings['privacy_policy_url'] ?? '',
+            'timezone' => $allSettings['timezone'] ?? config('app.timezone', 'UTC'),
         ], 'General settings retrieved successfully');
     }
 }

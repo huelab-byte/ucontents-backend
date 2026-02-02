@@ -23,6 +23,7 @@ class VideoOverlayDatabaseSeeder extends Seeder
             'view_all_video_overlay' => 'View all video overlay (admin)',
             'delete_any_video_overlay' => 'Delete any video overlay (admin)',
             'view_video_overlay_stats' => 'View video overlay statistics (admin)',
+            'use_video_overlay' => 'Browse and use shared video overlays (read-only)',
         ];
 
         $permissionIds = [];

@@ -40,6 +40,9 @@
         "pestphp/pest-plugin-laravel": "^3.2"
     },
     "autoload": {
+        "exclude-from-classmap": [
+            "Modules/*/vendor/"
+        ],
         "psr-4": {
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
@@ -68,6 +71,8 @@
             "Modules\\NotificationManagement\\Database\\Seeders\\": "Modules/NotificationManagement/database/seeders/",
             "Modules\\Support\\": "Modules/Support/app/",
             "Modules\\Support\\Database\\Seeders\\": "Modules/Support/database/seeders/",
+            "Modules\\PlanManagement\\": "Modules/PlanManagement/app/",
+            "Modules\\PlanManagement\\Database\\Seeders\\": "Modules/PlanManagement/database/seeders/",
             "Modules\\FootageLibrary\\": "Modules/FootageLibrary/app/",
             "Modules\\FootageLibrary\\Database\\Seeders\\": "Modules/FootageLibrary/database/seeders/",
             "Modules\\AudioLibrary\\": "Modules/AudioLibrary/app/",
@@ -80,6 +85,12 @@
             "Modules\\BgmLibrary\\Database\\Seeders\\": "Modules/BgmLibrary/database/seeders/",
             "Modules\\ImageOverlay\\": "Modules/ImageOverlay/app/",
             "Modules\\ImageOverlay\\Database\\Seeders\\": "Modules/ImageOverlay/database/seeders/",
+            "Modules\\MediaUpload\\": "Modules/MediaUpload/app/",
+            "Modules\\MediaUpload\\Database\\Seeders\\": "Modules/MediaUpload/database/seeders/",
+            "Modules\\ProxySetup\\": "Modules/ProxySetup/app/",
+            "Modules\\ProxySetup\\Database\\Seeders\\": "Modules/ProxySetup/database/seeders/",
+            "Modules\\BulkPosting\\": "Modules/BulkPosting/app/",
+            "Modules\\BulkPosting\\Database\\Seeders\\": "Modules/BulkPosting/database/seeders/",
             "Modules\\": "Modules/"
         },
         "files": [
@@ -110,6 +121,9 @@
             "Modules/NotificationManagement/app/Providers/RouteServiceProvider.php",
             "Modules/Support/app/Providers/SupportServiceProvider.php",
             "Modules/Support/app/Providers/RouteServiceProvider.php",
+            "Modules/PlanManagement/app/Providers/PlanManagementServiceProvider.php",
+            "Modules/PlanManagement/app/Providers/EventServiceProvider.php",
+            "Modules/PlanManagement/app/Providers/RouteServiceProvider.php",
             "Modules/FootageLibrary/app/Providers/FootageLibraryServiceProvider.php",
             "Modules/FootageLibrary/app/Providers/RouteServiceProvider.php",
             "Modules/AudioLibrary/app/Providers/AudioLibraryServiceProvider.php",
@@ -121,7 +135,13 @@
             "Modules/BgmLibrary/app/Providers/BgmLibraryServiceProvider.php",
             "Modules/BgmLibrary/app/Providers/RouteServiceProvider.php",
             "Modules/ImageOverlay/app/Providers/ImageOverlayServiceProvider.php",
-            "Modules/ImageOverlay/app/Providers/RouteServiceProvider.php"
+            "Modules/ImageOverlay/app/Providers/RouteServiceProvider.php",
+            "Modules/MediaUpload/app/Providers/MediaUploadServiceProvider.php",
+            "Modules/MediaUpload/app/Providers/RouteServiceProvider.php",
+            "Modules/ProxySetup/app/Providers/ProxySetupServiceProvider.php",
+            "Modules/ProxySetup/app/Providers/RouteServiceProvider.php",
+            "Modules/BulkPosting/app/Providers/BulkPostingServiceProvider.php",
+            "Modules/BulkPosting/app/Providers/RouteServiceProvider.php"
         ]
     },
     "autoload-dev": {

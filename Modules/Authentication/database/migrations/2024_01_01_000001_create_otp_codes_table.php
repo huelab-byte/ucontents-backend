@@ -13,6 +13,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Idempotent: skip if table already exists
+        if (Schema::hasTable('otp_codes')) {
+            return;
+        }
+
         Schema::create('otp_codes', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');

@@ -14,7 +14,7 @@ class ImagePolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermission('view_image') || $user->hasPermission('view_all_image');
+        return $user->hasPermission('view_image') || $user->hasPermission('view_all_image') || $user->hasPermission('use_image_library');
     }
 
     /**
@@ -26,7 +26,11 @@ class ImagePolicy
             return true;
         }
 
-        return $user->hasPermission('view_image') && $image->user_id === $user->id;
+        if ($user->hasPermission('view_image') && $image->user_id === $user->id) {
+            return true;
+        }
+
+        return $user->hasPermission('use_image_library') && $image->status === 'ready';
     }
 
     /**

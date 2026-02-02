@@ -39,5 +39,36 @@ class Notification extends Model
     {
         return $this->hasMany(NotificationRecipient::class, 'notification_id');
     }
+
+    /**
+     * Get the URL for this notification based on its type.
+     * Returns a relative path that the frontend can navigate to.
+     */
+    public function getUrl(): ?string
+    {
+        return match ($this->type) {
+            'support_ticket_created',
+            'support_ticket_replied',
+            'support_ticket_status_changed',
+            'support_ticket_assigned' => $this->getSupportTicketUrl(),
+            'subscription_expiring' => '/settings/subscription',
+            'announcement' => null,
+            default => null,
+        };
+    }
+
+    /**
+     * Get the URL for support ticket notifications.
+     */
+    private function getSupportTicketUrl(): ?string
+    {
+        $ticketId = $this->data['ticket_id'] ?? null;
+        if (!$ticketId) {
+            return null;
+        }
+
+        // Return generic path - frontend will determine correct route based on user role
+        return "/support/tickets/{$ticketId}";
+    }
 }
 

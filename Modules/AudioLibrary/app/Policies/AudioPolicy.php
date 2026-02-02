@@ -17,7 +17,7 @@ class AudioPolicy
         if ($user->isAdmin()) {
             return $user->hasPermission('view_all_audio');
         }
-        return $user->hasPermission('view_audio');
+        return $user->hasPermission('view_audio') || $user->hasPermission('use_audio_library');
     }
 
     /**
@@ -28,7 +28,11 @@ class AudioPolicy
         if ($user->isAdmin()) {
             return $user->hasPermission('view_all_audio');
         }
-        return $audio->user_id === $user->id && $user->hasPermission('view_audio');
+        if ($audio->user_id === $user->id && $user->hasPermission('view_audio')) {
+            return true;
+        }
+        // Browse shared: use_audio_library allows viewing ready items
+        return $user->hasPermission('use_audio_library') && $audio->status === 'ready';
     }
 
     /**

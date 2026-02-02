@@ -1,0 +1,11 @@
+{
+    "name": "ProxySetup",
+    "alias": "proxysetup",
+    "description": "Proxy management module for social media automation",
+    "keywords": ["proxy", "automation", "social media"],
+    "priority": 0,
+    "providers": [
+        "Modules\\ProxySetup\\Providers\\ProxySetupServiceProvider"
+    ],
+    "files": []
+}

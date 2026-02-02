@@ -17,7 +17,7 @@ class FootagePolicy
         if ($user->isAdmin()) {
             return $user->hasPermission('view_all_footage');
         }
-        return $user->hasPermission('view_footage');
+        return $user->hasPermission('view_footage') || $user->hasPermission('use_footage_library');
     }
 
     /**
@@ -28,7 +28,10 @@ class FootagePolicy
         if ($user->isAdmin()) {
             return $user->hasPermission('view_all_footage');
         }
-        return $footage->user_id === $user->id && $user->hasPermission('view_footage');
+        if ($footage->user_id === $user->id && $user->hasPermission('view_footage')) {
+            return true;
+        }
+        return $user->hasPermission('use_footage_library') && $footage->status === 'ready';
     }
 
     /**

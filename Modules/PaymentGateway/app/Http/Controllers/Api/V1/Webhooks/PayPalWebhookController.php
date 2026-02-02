@@ -105,6 +105,7 @@ class PayPalWebhookController extends BaseApiController
                     $payment->invoice->status = 'paid';
                     $payment->invoice->paid_at = now();
                     $payment->invoice->save();
+                    \Modules\PaymentGateway\Events\InvoicePaid::dispatch($payment->invoice);
                 }
             }
         }

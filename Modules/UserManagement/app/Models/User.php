@@ -120,9 +120,15 @@ class User extends Authenticatable implements JWTSubject
 
     /**
      * Check if user has a specific permission.
+     * Super admin has all permissions.
      */
     public function hasPermission(string $permissionSlug): bool
     {
+        // Super admin has all permissions
+        if ($this->hasRole('super_admin')) {
+            return true;
+        }
+
         return $this->roles()
             ->whereHas('permissions', function ($query) use ($permissionSlug) {
                 $query->where('slug', $permissionSlug);
@@ -132,9 +138,15 @@ class User extends Authenticatable implements JWTSubject
 
     /**
      * Check if user has any of the given permissions.
+     * Super admin has all permissions.
      */
     public function hasAnyPermission(array $permissionSlugs): bool
     {
+        // Super admin has all permissions
+        if ($this->hasRole('super_admin')) {
+            return true;
+        }
+
         return $this->roles()
             ->whereHas('permissions', function ($query) use ($permissionSlugs) {
                 $query->whereIn('slug', $permissionSlugs);

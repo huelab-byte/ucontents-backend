@@ -13,6 +13,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Idempotent: skip if table already exists
+        if (Schema::hasTable('api_clients')) {
+            return;
+        }
+
         Schema::create('api_clients', function (Blueprint $table) {
             $table->id();
             $table->string('name');
