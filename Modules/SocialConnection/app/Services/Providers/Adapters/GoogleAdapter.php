@@ -32,6 +32,7 @@ class GoogleAdapter implements ProviderAdapterInterface
             'profile',
             'email',
             'https://www.googleapis.com/auth/youtube.readonly',
+            'https://www.googleapis.com/auth/youtube.upload', // Required for bulk posting to YouTube
         ];
 
         return Socialite::driver('google')

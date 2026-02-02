@@ -80,25 +80,30 @@ git pull origin "$GIT_BRANCH"
 cd "$APP_DIR"
 
 # Install/update Composer dependencies
-echo -e "${GREEN}[4/10] Installing Composer dependencies...${NC}"
+echo -e "${GREEN}[4/12] Installing Composer dependencies...${NC}"
 composer install --no-dev --optimize-autoloader --no-interaction
 
-# Regenerate autoloader (suppress PSR-4 warnings from modules - they're handled by Laravel Modules)
-echo -e "${GREEN}[4.5/10] Regenerating autoloader...${NC}"
+# Regenerate autoloader for new modules (CRITICAL for new modules to be recognized)
+echo -e "${GREEN}[5/12] Regenerating autoloader for modules...${NC}"
 composer dump-autoload --optimize --no-interaction 2>&1 | grep -v "does not comply with psr-4" || true
+
+# Clear module cache and rediscover modules
+echo -e "${GREEN}[6/12] Clearing and rediscovering modules...${NC}"
+php artisan module:clear 2>/dev/null || true
+php artisan package:discover --ansi
 
 # Install/update NPM dependencies (if needed)
 if [ -f package.json ]; then
-    echo -e "${GREEN}[5/10] Installing NPM dependencies...${NC}"
+    echo -e "${GREEN}[7/12] Installing NPM dependencies...${NC}"
     npm ci --production 2>/dev/null || npm install --production 2>/dev/null || echo -e "${YELLOW}NPM install skipped${NC}"
 fi
 
 # Run database migrations (safe, won't lose data)
-echo -e "${GREEN}[6/10] Running database migrations...${NC}"
+echo -e "${GREEN}[8/12] Running database migrations...${NC}"
 php artisan migrate --force
 
 # Run database seeders (safe - uses firstOrCreate/updateOrCreate)
-echo -e "${GREEN}[6.5/10] Running database seeders...${NC}"
+echo -e "${GREEN}[9/12] Running database seeders...${NC}"
 # Run seeders (all seeders use firstOrCreate/updateOrCreate - safe for repeated runs)
 # Note: PSR-4 warnings from modules are harmless - Laravel Modules handles loading
 php artisan db:seed --force || {
@@ -106,7 +111,7 @@ php artisan db:seed --force || {
 }
 
 # Clear and cache configuration
-echo -e "${GREEN}[7/10] Optimizing application...${NC}"
+echo -e "${GREEN}[10/12] Optimizing application...${NC}"
 php artisan config:clear
 php artisan cache:clear
 php artisan route:clear
@@ -127,21 +132,19 @@ php artisan view:cache 2>/dev/null || {
 }
 
 # Ensure storage link exists
-echo -e "${GREEN}[8/10] Ensuring storage link...${NC}"
 php artisan storage:link || true
 
 # Set proper permissions
-echo -e "${GREEN}[9/10] Setting permissions...${NC}"
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
 # Restart queue workers (graceful restart)
-echo -e "${GREEN}[10/11] Restarting queue workers...${NC}"
+echo -e "${GREEN}[11/12] Restarting queue workers...${NC}"
 php artisan queue:restart
 systemctl restart laravel-queue-worker 2>/dev/null || echo -e "${YELLOW}Queue worker service not found or not running${NC}"
 
 # Restart scheduler (for scheduled tasks like bulk-posting:process-schedule)
-echo -e "${GREEN}[11/11] Restarting Laravel scheduler...${NC}"
+echo -e "${GREEN}[12/12] Restarting Laravel scheduler...${NC}"
 systemctl restart laravel-scheduler 2>/dev/null || echo -e "${YELLOW}Scheduler service not found or not running. Install with: sudo cp deployment/laravel-scheduler.service /etc/systemd/system/ && sudo systemctl enable laravel-scheduler && sudo systemctl start laravel-scheduler${NC}"
 
 # Disable maintenance mode

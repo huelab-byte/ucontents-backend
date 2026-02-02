@@ -109,6 +109,7 @@ class CampaignQueryService
             'networkResults' => $networkResults,
             'status' => $this->mapContentStatus($item->status),
             'contentText' => $item->payload['caption'] ?? '',
+            'errorMessage' => $item->status === 'failed' ? ($item->error_message ?? null) : null,
         ];
     }
 

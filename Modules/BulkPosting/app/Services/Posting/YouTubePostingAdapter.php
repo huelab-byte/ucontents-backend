@@ -75,10 +75,14 @@ class YouTubePostingAdapter implements PostingAdapterInterface
         }
 
         // Step 2: Initialize resumable upload
-        $uploadUrl = $this->initializeResumableUpload($accessToken, $title, $description, $tags, strlen($videoContent), $curlOpts);
-        if ($uploadUrl === null) {
-            return PostResult::failure('Failed to initialize YouTube upload', 'INIT_FAILED');
+        $initResult = $this->initializeResumableUpload($accessToken, $title, $description, $tags, strlen($videoContent), $curlOpts);
+        if ($initResult['uploadUrl'] === null) {
+            return PostResult::failure(
+                $initResult['error'] ?? 'Failed to initialize YouTube upload',
+                $initResult['error_code'] ?? 'INIT_FAILED'
+            );
         }
+        $uploadUrl = $initResult['uploadUrl'];
 
         // Step 3: Upload the video content
         $videoId = $this->uploadVideoContent($uploadUrl, $videoContent, $curlOpts);
@@ -125,9 +129,11 @@ class YouTubePostingAdapter implements PostingAdapterInterface
     }
 
     /**
-     * Initialize resumable upload session
+     * Initialize resumable upload session.
+     *
+     * @return array{uploadUrl: ?string, error?: string, error_code?: string}
      */
-    protected function initializeResumableUpload(string $accessToken, string $title, string $description, array $tags, int $contentLength, array $curlOpts): ?string
+    protected function initializeResumableUpload(string $accessToken, string $title, string $description, array $tags, int $contentLength, array $curlOpts): array
     {
         $metadata = [
             'snippet' => [
@@ -163,21 +169,73 @@ class YouTubePostingAdapter implements PostingAdapterInterface
             $response = $request->post($url, $metadata);
 
             if ($response->successful()) {
-                return $response->header('Location');
+                $location = $response->header('Location');
+                if (! empty($location)) {
+                    return ['uploadUrl' => $location];
+                }
+                Log::warning('YouTubePostingAdapter: Init success but no Location header');
+
+                return [
+                    'uploadUrl' => null,
+                    'error' => 'YouTube did not return upload URL (missing Location header).',
+                    'error_code' => 'INIT_FAILED',
+                ];
             }
 
+            $status = $response->status();
+            $body = $response->json() ?? [];
+            $errors = $body['error']['errors'][0] ?? [];
+            $reason = $errors['reason'] ?? $errors['message'] ?? null;
+            $message = $body['error']['message'] ?? (string) $response->body();
+            $userMessage = $this->formatYouTubeInitError($status, is_string($reason) ? $reason : null, is_string($message) ? $message : (string) $response->body());
+
             Log::warning('YouTubePostingAdapter: Failed to initialize upload', [
-                'status' => $response->status(),
-                'body' => $response->body(),
+                'status' => $status,
+                'body' => $body,
+                'user_message' => $userMessage,
             ]);
 
-            return null;
+            return [
+                'uploadUrl' => null,
+                'error' => $userMessage,
+                'error_code' => 'INIT_FAILED',
+            ];
         } catch (\Throwable $e) {
             Log::error('YouTubePostingAdapter: Exception initializing upload', [
                 'error' => $e->getMessage(),
             ]);
-            return null;
+
+            return [
+                'uploadUrl' => null,
+                'error' => 'YouTube init error: ' . $e->getMessage(),
+                'error_code' => 'INIT_FAILED',
+            ];
         }
+    }
+
+    /**
+     * Format a user-friendly message for YouTube init failure.
+     */
+    protected function formatYouTubeInitError(int $status, ?string $reason, string $message): string
+    {
+        if ($status === 401) {
+            return 'YouTube access token expired or invalid. Reconnect your YouTube channel in Connection settings.';
+        }
+        if ($status === 403) {
+            if ($reason === 'quotaExceeded' || str_contains((string) $message, 'quota')) {
+                return 'YouTube API quota exceeded. Try again later or check your Google Cloud quota.';
+            }
+            if ($reason === 'accessNotConfigured' || str_contains((string) $message, 'YouTube Data API')) {
+                return 'YouTube Data API v3 is not enabled for this project. Enable it in Google Cloud Console.';
+            }
+
+            return 'YouTube rejected the request (403). Reconnect your channel or check Google Cloud project settings.';
+        }
+        if ($status === 400) {
+            return 'Invalid video metadata: ' . (strlen($message) > 120 ? substr($message, 0, 120) . '…' : $message);
+        }
+
+        return "YouTube API error ({$status}): " . (strlen($message) > 100 ? substr($message, 0, 100) . '…' : $message);
     }
 
     /**
