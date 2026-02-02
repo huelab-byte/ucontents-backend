@@ -20,5 +20,6 @@
     "PlanManagement": true,
     "MediaUpload": true,
     "ProxySetup": true,
-    "BulkPosting": true
+    "BulkPosting": true,
+    "CustomerManagement": true
 }

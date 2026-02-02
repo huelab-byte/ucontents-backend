@@ -7,6 +7,11 @@ return [
     |--------------------------------------------------------------------------
     | ProxySetup Module Configuration
     |--------------------------------------------------------------------------
+    |
+    | This is a customer-only module. Proxies are managed by individual customers
+    | for their own social media posting operations. There are no admin endpoints
+    | because admins do not need to manage customer proxies.
+    |
     */
     
     'name' => 'ProxySetup',

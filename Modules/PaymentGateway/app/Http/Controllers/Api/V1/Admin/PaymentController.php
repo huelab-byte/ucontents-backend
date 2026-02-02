@@ -33,7 +33,8 @@ class PaymentController extends BaseApiController
             'gateway_name' => $validated['gateway_name'] ?? null,
         ], fn($v) => $v !== null);
 
-        $payments = $this->queryService->listAllWithFilters($filters, $validated['per_page'] ?? 15);
+        $perPage = isset($validated['per_page']) ? (int) $validated['per_page'] : 15;
+        $payments = $this->queryService->listAllWithFilters($filters, $perPage);
 
         return $this->paginatedResource($payments, PaymentResource::class, 'Payments retrieved successfully');
     }

@@ -37,13 +37,13 @@ class ProcessFileUploadJob implements ShouldQueue
                 'progress' => 10,
             ]);
 
-            // Get file from temporary storage
-            if (!Storage::exists($queueItem->file_path)) {
+            // Get file from temporary storage (local disk for queue temp files)
+            if (!Storage::disk('local')->exists($queueItem->file_path)) {
                 throw new \Exception('Temporary file not found');
             }
 
             // Read file content and create temporary file for upload
-            $content = Storage::get($queueItem->file_path);
+            $content = Storage::disk('local')->get($queueItem->file_path);
             $tempFile = tempnam(sys_get_temp_dir(), 'upload_');
             file_put_contents($tempFile, $content);
             
@@ -56,7 +56,7 @@ class ProcessFileUploadJob implements ShouldQueue
                 true
             );
 
-            $queueItem->update(['progress' => 50});
+            $queueItem->update(['progress' => 50]);
 
             // Upload file
             $metadata = $queueItem->metadata ?? [];
@@ -70,7 +70,7 @@ class ProcessFileUploadJob implements ShouldQueue
             );
 
             // Clean up temporary files
-            Storage::delete($queueItem->file_path);
+            Storage::disk('local')->delete($queueItem->file_path);
             if (file_exists($tempFile)) {
                 unlink($tempFile);
             }

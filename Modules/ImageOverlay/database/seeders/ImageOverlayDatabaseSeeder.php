@@ -24,6 +24,8 @@ class ImageOverlayDatabaseSeeder extends Seeder
             'view_all_image_overlay' => 'View all image overlay (admin)',
             'delete_any_image_overlay' => 'Delete any image overlay (admin)',
             'view_image_overlay_stats' => 'View image overlay statistics (admin)',
+            'view_image_overlay_library' => 'View image overlay library',
+            'manage_image_overlay_library' => 'Manage image overlay library',
             'use_image_overlay' => 'Browse and use shared image overlays (read-only)',
         ];
 
@@ -42,6 +44,8 @@ class ImageOverlayDatabaseSeeder extends Seeder
 
         // Assign admin permissions to super_admin and admin roles
         $adminPermissions = Permission::whereIn('slug', [
+            'view_image_overlay_library',
+            'manage_image_overlay_library',
             'view_all_image_overlay',
             'view_image_overlay_stats',
             'delete_any_image_overlay',

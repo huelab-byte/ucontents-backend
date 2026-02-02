@@ -1,0 +1,11 @@
+{
+    "name": "CustomerManagement",
+    "alias": "customermanagement",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\CustomerManagement\\Providers\\CustomerManagementServiceProvider"
+    ],
+    "files": []
+}

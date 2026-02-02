@@ -136,9 +136,13 @@ chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
 # Restart queue workers (graceful restart)
-echo -e "${GREEN}[10/10] Restarting queue workers...${NC}"
+echo -e "${GREEN}[10/11] Restarting queue workers...${NC}"
 php artisan queue:restart
 systemctl restart laravel-queue-worker 2>/dev/null || echo -e "${YELLOW}Queue worker service not found or not running${NC}"
+
+# Restart scheduler (for scheduled tasks like bulk-posting:process-schedule)
+echo -e "${GREEN}[11/11] Restarting Laravel scheduler...${NC}"
+systemctl restart laravel-scheduler 2>/dev/null || echo -e "${YELLOW}Scheduler service not found or not running. Install with: sudo cp deployment/laravel-scheduler.service /etc/systemd/system/ && sudo systemctl enable laravel-scheduler && sudo systemctl start laravel-scheduler${NC}"
 
 # Disable maintenance mode
 echo -e "${GREEN}Disabling maintenance mode...${NC}"
@@ -159,5 +163,6 @@ echo ""
 echo -e "${YELLOW}Next steps:${NC}"
 echo "  1. Check application logs: tail -f storage/logs/laravel.log"
 echo "  2. Verify queue workers: systemctl status laravel-queue-worker"
-echo "  3. Test API endpoints"
+echo "  3. Verify scheduler: systemctl status laravel-scheduler"
+echo "  4. Test API endpoints"
 echo ""

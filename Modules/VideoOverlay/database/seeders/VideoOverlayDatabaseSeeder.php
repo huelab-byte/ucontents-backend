@@ -23,6 +23,8 @@ class VideoOverlayDatabaseSeeder extends Seeder
             'view_all_video_overlay' => 'View all video overlay (admin)',
             'delete_any_video_overlay' => 'Delete any video overlay (admin)',
             'view_video_overlay_stats' => 'View video overlay statistics (admin)',
+            'view_video_overlay_library' => 'View video overlay library',
+            'manage_video_overlay_library' => 'Manage video overlay library',
             'use_video_overlay' => 'Browse and use shared video overlays (read-only)',
         ];
 
@@ -41,6 +43,8 @@ class VideoOverlayDatabaseSeeder extends Seeder
 
         // Assign admin permissions to super_admin and admin roles
         $adminPermissions = Permission::whereIn('slug', [
+            'view_video_overlay_library',
+            'manage_video_overlay_library',
             'view_all_video_overlay',
             'view_video_overlay_stats',
             'delete_any_video_overlay',

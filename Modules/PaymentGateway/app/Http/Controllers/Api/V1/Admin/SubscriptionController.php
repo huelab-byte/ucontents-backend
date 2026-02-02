@@ -32,7 +32,8 @@ class SubscriptionController extends BaseApiController
             'user_id' => $validated['user_id'] ?? null,
         ], fn($v) => $v !== null);
 
-        $subscriptions = $this->queryService->listAllWithFilters($filters, $validated['per_page'] ?? 15);
+        $perPage = isset($validated['per_page']) ? (int) $validated['per_page'] : 15;
+        $subscriptions = $this->queryService->listAllWithFilters($filters, $perPage);
 
         return $this->paginatedResource($subscriptions, SubscriptionResource::class, 'Subscriptions retrieved successfully');
     }

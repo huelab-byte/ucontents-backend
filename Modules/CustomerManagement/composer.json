@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/customermanagement",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\CustomerManagement\\": "app/",
+            "Modules\\CustomerManagement\\Database\\Factories\\": "database/factories/",
+            "Modules\\CustomerManagement\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\CustomerManagement\\Tests\\": "tests/"
+        }
+    }
+}

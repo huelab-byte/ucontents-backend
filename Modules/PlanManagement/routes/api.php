@@ -30,6 +30,9 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('plans', AdminPlanController::class)
                 ->names('admin.plans')
                 ->middleware('permission:view_plans|manage_plans');
+            Route::post('plans/{plan}/assign', [AdminPlanController::class, 'assign'])
+                ->name('admin.plans.assign')
+                ->middleware('permission:manage_plans');
         });
 
     // Customer routes

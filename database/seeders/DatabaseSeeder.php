@@ -47,6 +47,9 @@ class DatabaseSeeder extends Seeder
         // Seed BulkPosting module (creates bulk posting permissions)
         $this->call(\Modules\BulkPosting\Database\Seeders\BulkPostingDatabaseSeeder::class);
 
+        // Seed CustomerManagement module (creates customer management permissions)
+        $this->call(\Modules\CustomerManagement\Database\Seeders\CustomerManagementDatabaseSeeder::class);
+
         // Assign default "browse shared library/overlay" permissions to customer role
         $this->syncCustomerLibraryPermissions();
 

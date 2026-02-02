@@ -3,6 +3,18 @@
 declare(strict_types=1);
 
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | BulkPosting Module Configuration
+    |--------------------------------------------------------------------------
+    |
+    | This is a customer-only module. Bulk posting campaigns are created and
+    | managed by individual customers for scheduling their social media content.
+    | Admins can view customer campaigns through the CustomerManagement module
+    | but do not have separate admin endpoints here.
+    |
+    */
+    
     'name' => 'BulkPosting',
     'enabled' => true,
 

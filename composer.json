@@ -91,6 +91,8 @@
             "Modules\\ProxySetup\\Database\\Seeders\\": "Modules/ProxySetup/database/seeders/",
             "Modules\\BulkPosting\\": "Modules/BulkPosting/app/",
             "Modules\\BulkPosting\\Database\\Seeders\\": "Modules/BulkPosting/database/seeders/",
+            "Modules\\CustomerManagement\\": "Modules/CustomerManagement/app/",
+            "Modules\\CustomerManagement\\Database\\Seeders\\": "Modules/CustomerManagement/database/seeders/",
             "Modules\\": "Modules/"
         },
         "files": [
@@ -141,7 +143,10 @@
             "Modules/ProxySetup/app/Providers/ProxySetupServiceProvider.php",
             "Modules/ProxySetup/app/Providers/RouteServiceProvider.php",
             "Modules/BulkPosting/app/Providers/BulkPostingServiceProvider.php",
-            "Modules/BulkPosting/app/Providers/RouteServiceProvider.php"
+            "Modules/BulkPosting/app/Providers/RouteServiceProvider.php",
+            "Modules/CustomerManagement/app/Providers/CustomerManagementServiceProvider.php",
+            "Modules/CustomerManagement/app/Providers/EventServiceProvider.php",
+            "Modules/CustomerManagement/app/Providers/RouteServiceProvider.php"
         ]
     },
     "autoload-dev": {

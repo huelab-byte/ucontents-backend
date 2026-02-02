@@ -14,6 +14,22 @@ class ListPlansRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $merge = [];
+        foreach (['is_active', 'featured', 'is_free_plan'] as $key) {
+            if ($this->has($key)) {
+                $value = $this->input($key);
+                if (is_string($value)) {
+                    $merge[$key] = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $value;
+                }
+            }
+        }
+        if ($merge !== []) {
+            $this->merge($merge);
+        }
+    }
+
     public function rules(): array
     {
         return [
