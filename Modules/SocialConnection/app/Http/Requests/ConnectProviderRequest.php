@@ -18,6 +18,7 @@ class ConnectProviderRequest extends FormRequest
         return [
             'channel_types' => ['sometimes', 'array'],
             'channel_types.*' => ['string', 'in:facebook_page,facebook_profile,instagram_business'],
+            'callback_base_url' => ['sometimes', 'string', 'max:500'],
         ];
     }
 }

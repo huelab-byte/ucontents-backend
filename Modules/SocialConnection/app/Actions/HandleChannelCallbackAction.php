@@ -6,6 +6,7 @@ namespace Modules\SocialConnection\Actions;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Modules\SocialConnection\Models\SocialConnectionAccount;
 use Modules\SocialConnection\Models\SocialConnectionChannel;
 use Modules\SocialConnection\Models\SocialProviderApp;
@@ -25,8 +26,8 @@ class HandleChannelCallbackAction
             throw new \RuntimeException('Invalid OAuth state. Please try connecting again.');
         }
 
-        // One-time use: resolve initiating user from state
-        $statePayload = Cache::pull($this->stateCacheKey($provider, $stateFromRequest));
+        // One-time use: resolve initiating user from state (database first so it works with any cache driver)
+        $statePayload = $this->pullStatePayload($provider, $stateFromRequest);
         $userId = $statePayload['user_id'] ?? null;
         $channelTypes = $statePayload['channel_types'] ?? null;
         if (!$userId) {
@@ -119,6 +120,31 @@ class HandleChannelCallbackAction
                 'channels_upserted' => $upserted,
             ];
         });
+    }
+
+    /**
+     * Resolve and consume state payload (one-time use). Tries database first so it works with array cache locally.
+     */
+    private function pullStatePayload(string $provider, string $state): ?array
+    {
+        if (Schema::hasTable('social_connection_oauth_states')) {
+            $row = DB::table('social_connection_oauth_states')
+                ->where('provider', $provider)
+                ->where('state', $state)
+                ->where('expires_at', '>', now())
+                ->first();
+            if ($row) {
+                DB::table('social_connection_oauth_states')
+                    ->where('id', $row->id)
+                    ->delete();
+                $payload = json_decode($row->payload, true);
+                return is_array($payload) ? $payload : null;
+            }
+        }
+
+        $payload = Cache::pull($this->stateCacheKey($provider, $state));
+
+        return is_array($payload) ? $payload : null;
     }
 
     private function stateCacheKey(string $provider, string $state): string

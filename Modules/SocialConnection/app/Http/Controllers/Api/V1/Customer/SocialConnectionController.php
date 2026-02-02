@@ -39,6 +39,56 @@ class SocialConnectionController extends BaseApiController
 {
     private const ALLOWED_PROVIDERS = ['meta', 'google', 'tiktok'];
 
+    /**
+     * Normalize frontend URL for OAuth: remove www. to avoid redirect_uri_mismatch with providers.
+     */
+    private function normalizeFrontendUrl(string $url): string
+    {
+        $parsed = parse_url($url);
+        if (!isset($parsed['host'])) {
+            return rtrim($url, '/');
+        }
+        $host = $parsed['host'];
+        if (str_starts_with(strtolower($host), 'www.')) {
+            $parsed['host'] = substr($host, 4);
+            $scheme = isset($parsed['scheme']) ? $parsed['scheme'] . '://' : 'http://';
+            $url = $scheme . $parsed['host'] . (isset($parsed['port']) ? ':' . $parsed['port'] : '') . (isset($parsed['path']) ? $parsed['path'] : '') . (isset($parsed['query']) ? '?' . $parsed['query'] : '') . (isset($parsed['fragment']) ? '#' . $parsed['fragment'] : '');
+        }
+        return rtrim($url, '/');
+    }
+
+    private function getFrontendBaseUrl(): string
+    {
+        $url = config('app.frontend_url', env('FRONTEND_URL', env('APP_URL', 'http://localhost:3000')));
+        return $this->normalizeFrontendUrl($url);
+    }
+
+    /**
+     * Resolve callback base URL for OAuth: use request's callback_base_url if allowed (same host or localhost), else FRONTEND_URL.
+     * Ensures redirect_uri sent to the provider matches the URL the user is actually on (e.g. https://localhost:3000).
+     */
+    private function getCallbackBaseUrl(Request $request): string
+    {
+        $candidate = $request->input('callback_base_url');
+        if ($candidate === null || $candidate === '') {
+            return $this->getFrontendBaseUrl();
+        }
+        $candidate = trim($candidate);
+        $parsed = parse_url($candidate);
+        if (!isset($parsed['scheme'], $parsed['host'])) {
+            return $this->getFrontendBaseUrl();
+        }
+        $base = $this->normalizeFrontendUrl($candidate);
+        $configBase = $this->getFrontendBaseUrl();
+        $configParsed = parse_url($configBase);
+        $configHost = isset($configParsed['host']) ? strtolower($configParsed['host']) : '';
+        $candidateHost = strtolower($parsed['host']);
+        // Allow if same host as FRONTEND_URL, or localhost/127.0.0.1 for local dev
+        $allowed = ($candidateHost === $configHost)
+            || in_array($candidateHost, ['localhost', '127.0.0.1'], true);
+        return $allowed ? rtrim($base, '/') : $this->getFrontendBaseUrl();
+    }
+
     public function providers(): JsonResponse
     {
         $this->authorize('viewAny', SocialConnectionChannel::class);
@@ -126,7 +176,17 @@ class SocialConnectionController extends BaseApiController
             ? $validated['channel_types']
             : null;
 
-        $callbackUrl = $this->buildOAuthCallbackUrl($provider, $channelTypes);
+        $callbackBaseUrl = $this->getCallbackBaseUrl($request);
+        $callbackUrl = $this->buildOAuthCallbackUrl($provider, $channelTypes, $callbackBaseUrl);
+
+        Log::debug('SocialConnection: redirect initiated', [
+            'provider' => $provider,
+            'callback_base_url_from_request' => $request->input('callback_base_url'),
+            'resolved_callback_base_url' => $callbackBaseUrl,
+            'callback_url' => $callbackUrl,
+            'channel_types' => $channelTypes,
+            'user_id' => $request->user()->id ?? null,
+        ]);
 
         $redirectUrl = $action->execute($request->user(), $provider, $app, $callbackUrl, $channelTypes);
 
@@ -164,9 +224,8 @@ class SocialConnectionController extends BaseApiController
                 $request->query('state')
             );
 
-            $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', env('APP_URL', 'http://localhost:3000')));
-            $baseUrl = rtrim($frontendUrl, '/');
-            
+            $baseUrl = $this->getFrontendBaseUrl();
+
             // For Meta, redirect with selection_token for channel selection
             if ($provider === 'meta' && isset($result['selection_token'])) {
                 $redirectUrl = "{$baseUrl}/connection?provider={$provider}&status=select&token={$result['selection_token']}&channels_available={$result['channels_available']}";
@@ -187,12 +246,16 @@ class SocialConnectionController extends BaseApiController
                 'line' => $e->getLine(),
             ]);
 
-            $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', env('APP_URL', 'http://localhost:3000')));
-            $baseUrl = rtrim($frontendUrl, '/');
+            $baseUrl = $this->getFrontendBaseUrl();
 
-            // Do not expose internal error details (SQL, stack traces, etc.) in the redirect URL.
-            // Frontend can show a generic "Connection failed" message based on this status.
-            $redirectUrl = "{$baseUrl}/connection?provider={$provider}&status=error&error=connection_failed";
+            $msg = $e->getMessage();
+            $errorCode = 'connection_failed';
+            if (str_contains($msg, 'session expired') || str_contains($msg, 'Invalid OAuth state')) {
+                $errorCode = 'session_expired';
+            } elseif (str_contains($msg, 'redirect_uri_mismatch') || str_contains($msg, 'redirect_uri')) {
+                $errorCode = 'redirect_uri_mismatch';
+            }
+            $redirectUrl = "{$baseUrl}/connection?provider={$provider}&status=error&error={$errorCode}";
             return redirect($redirectUrl);
         }
     }
@@ -446,7 +509,7 @@ class SocialConnectionController extends BaseApiController
             return $this->error('Missing code or state', 400);
         }
 
-        if (!config('app.oauth_redirect_use_frontend', false)) {
+        if (!config('app.oauth_redirect_use_frontend', true)) {
             return $this->error('Exchange-code is only used when OAuth redirect is set to frontend', 400);
         }
 
@@ -459,8 +522,16 @@ class SocialConnectionController extends BaseApiController
         $redirectUri = $request->input('redirect_uri');
         $callbackUrl = $this->resolveCallbackUrlForExchange($provider, $redirectUri);
 
-        // Make code/state available to Socialite (it reads from current request)
+        Log::debug('SocialConnection: exchangeCode initiated', [
+            'provider' => $provider,
+            'redirect_uri_from_frontend' => $redirectUri,
+            'resolved_callback_url' => $callbackUrl,
+            'user_id' => $request->user()->id ?? null,
+        ]);
+
+        // Make code/state available to Socialite (reads via $request->input() from query + request)
         $request->merge(['code' => $code, 'state' => $state]);
+        $request->query->add(['code' => $code, 'state' => $state]);
 
         try {
             $result = $action->execute(
@@ -470,8 +541,7 @@ class SocialConnectionController extends BaseApiController
                 $state
             );
 
-            $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', env('APP_URL', 'http://localhost:3000')));
-            $baseUrl = rtrim($frontendUrl, '/');
+            $baseUrl = $this->getFrontendBaseUrl();
 
             if ($provider === 'meta' && isset($result['selection_token'])) {
                 $redirectUrl = "{$baseUrl}/connection?provider={$provider}&status=select&token={$result['selection_token']}&channels_available={$result['channels_available']}";
@@ -486,25 +556,52 @@ class SocialConnectionController extends BaseApiController
                 'provider' => $provider,
                 'user_id' => $request->user()->id ?? null,
                 'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
-            $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', env('APP_URL', 'http://localhost:3000')));
-            $baseUrl = rtrim($frontendUrl, '/');
-            $redirectUrl = "{$baseUrl}/connection?provider={$provider}&status=error&error=connection_failed";
-            return $this->success(['redirect_url' => $redirectUrl], 'OK');
+            $baseUrl = $this->getFrontendBaseUrl();
+            $msg = $e->getMessage();
+            $errorCode = 'connection_failed';
+            if (str_contains($msg, 'session expired') || str_contains($msg, 'Invalid OAuth state')) {
+                $errorCode = 'session_expired';
+            } elseif (str_contains($msg, 'redirect_uri_mismatch') || str_contains($msg, 'redirect_uri')) {
+                $errorCode = 'redirect_uri_mismatch';
+            }
+            $redirectUrl = "{$baseUrl}/connection?provider={$provider}&status=error&error={$errorCode}";
+            $errorMessage = $e->getMessage();
+            if ($errorMessage !== '' && strlen($errorMessage) < 400) {
+                $redirectUrl .= '&error_message=' . rawurlencode($errorMessage);
+            }
+            return $this->success([
+                'redirect_url' => $redirectUrl,
+                'error_message' => $errorMessage,
+            ], 'OK');
         }
     }
 
     /**
      * Build OAuth callback URL: frontend /app/{platform}/{type} when OAUTH_REDIRECT_USE_FRONTEND is true, else backend.
-     * Paths: /app/tiktok/profile, /app/youtube/channel, /app/facebook/profile, /app/facebook/page, /app/instagram/profile
+     * TikTok: use fixed TIKTOK_OAUTH_CALLBACK_URL (e.g. https://ucontents.com/app/tiktok/profile) for live app.
+     * Production: use domain without www to avoid redirect_uri_mismatch.
+     *
+     * @param string|null $overrideBaseUrl When provided (e.g. from frontend callback_base_url), use this as base for frontend callback
      */
-    private function buildOAuthCallbackUrl(string $provider, ?array $channelTypes = null): string
+    private function buildOAuthCallbackUrl(string $provider, ?array $channelTypes = null, ?string $overrideBaseUrl = null): string
     {
-        if (config('app.oauth_redirect_use_frontend', false)) {
-            $frontendUrl = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/');
+        // TikTok live app cannot change callback URL — use fixed URL for both social login and add connection
+        if ($provider === 'tiktok') {
+            $fixed = config('app.tiktok_oauth_callback_url');
+            if ($fixed !== null && $fixed !== '') {
+                return $this->normalizeFrontendUrl(rtrim($fixed, '/'));
+            }
+        }
+
+        if (config('app.oauth_redirect_use_frontend', true)) {
+            $baseUrl = $overrideBaseUrl !== null && $overrideBaseUrl !== ''
+                ? rtrim($this->normalizeFrontendUrl($overrideBaseUrl), '/')
+                : $this->getFrontendBaseUrl();
             $path = $this->oauthCallbackPath($provider, $channelTypes);
-            return $frontendUrl . '/app/' . $path;
+            return $baseUrl . '/app/' . $path;
         }
 
         return rtrim(config('app.url', env('APP_URL', 'http://localhost:8000')), '/')
@@ -554,16 +651,42 @@ class SocialConnectionController extends BaseApiController
             'facebook/page',
             'instagram/profile',
         ];
+
+        // Log input for debugging
+        Log::debug('SocialConnection: resolving callback URL for exchange', [
+            'provider' => $provider,
+            'redirect_uri_input' => $redirectUri,
+        ]);
+
         if ($redirectUri !== null && $redirectUri !== '') {
             $parsed = parse_url($redirectUri);
             $path = isset($parsed['path']) ? ltrim($parsed['path'], '/') : '';
+            $host = $parsed['host'] ?? '';
+
+            // Validate host is allowed (localhost or configured frontend host)
+            $frontendHost = parse_url($this->getFrontendBaseUrl(), PHP_URL_HOST) ?? '';
+            $allowedHosts = ['localhost', '127.0.0.1', strtolower($frontendHost)];
+            $hostAllowed = in_array(strtolower($host), $allowedHosts, true);
+
             foreach ($allowedPaths as $allowed) {
-                if ($path === 'app/' . $allowed || $path === $allowed) {
-                    return preg_replace('/[#?].*$/', '', $redirectUri);
+                if (($path === 'app/' . $allowed || $path === $allowed) && $hostAllowed) {
+                    $url = preg_replace('/[#?].*$/', '', $redirectUri);
+                    Log::debug('SocialConnection: using frontend redirect_uri', ['url' => $url]);
+                    return $url;
                 }
             }
+
+            Log::warning('SocialConnection: redirect_uri path or host not allowed', [
+                'path' => $path,
+                'host' => $host,
+                'host_allowed' => $hostAllowed,
+                'allowed_hosts' => $allowedHosts,
+            ]);
         }
-        return $this->buildOAuthCallbackUrl($provider, null);
+
+        $fallbackUrl = $this->buildOAuthCallbackUrl($provider, null);
+        Log::debug('SocialConnection: using fallback callback URL', ['url' => $fallbackUrl]);
+        return $fallbackUrl;
     }
 
     private function isProviderEnabledForCustomer(SocialProviderApp $app): bool

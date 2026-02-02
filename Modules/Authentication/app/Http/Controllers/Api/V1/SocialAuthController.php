@@ -59,20 +59,14 @@ class SocialAuthController extends BaseApiController
         }
 
         try {
-            // Get callback URL - OAuth provider must redirect to backend API endpoint
-            // This URL must be registered in the OAuth provider's console (Google Cloud Console, etc.)
-            $appUrl = config('app.url', env('APP_URL', 'http://localhost:8000'));
-            $callbackUrl = rtrim($appUrl, '/') . "/api/v1/auth/social/{$provider}/callback";
+            // TikTok: use frontend callback (fixed URL for live app). Other providers: backend callback.
+            $callbackUrl = $this->getSocialAuthCallbackUrl($provider);
 
-            // Log the callback URL for debugging (remove in production)
             Log::info("Social auth redirect for {$provider}", [
                 'callback_url' => $callbackUrl,
-                'app_url' => $appUrl,
                 'mode' => $mode ?? 'default',
             ]);
 
-            // Configure Socialite dynamically and redirect
-            // Use stateless() to avoid session requirements
             return $this->getSocialiteDriver($provider, $clientId, $clientSecret, $callbackUrl, $mode)
                 ->stateless()
                 ->redirect();
@@ -132,9 +126,7 @@ class SocialAuthController extends BaseApiController
         }
 
         try {
-            // Get callback URL - must match what's configured in OAuth provider (backend API)
-            $appUrl = config('app.url', env('APP_URL', 'http://localhost:8000'));
-            $callbackUrl = rtrim($appUrl, '/') . "/api/v1/auth/social/{$provider}/callback";
+            $callbackUrl = $this->getSocialAuthCallbackUrl($provider);
 
             // Configure Socialite dynamically and get user
             // Use stateless() to avoid session requirements
@@ -146,11 +138,9 @@ class SocialAuthController extends BaseApiController
             // Handle authentication (login if exists, register if new)
             $result = $this->socialAuthAction->execute($provider, $socialiteUser);
 
-            // Redirect to frontend callback page with token
-            // This follows best practice: backend processes OAuth, frontend handles token storage
-            $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', env('APP_URL', 'http://localhost:3000')));
+            $frontendUrl = $this->normalizeFrontendUrl(config('app.frontend_url', env('FRONTEND_URL', env('APP_URL', 'http://localhost:3000'))));
             $token = $result['token'];
-            $redirectUrl = rtrim($frontendUrl, '/') . "/auth/social/callback?token={$token}";
+            $redirectUrl = $frontendUrl . "/auth/social/callback?token={$token}";
 
             return redirect($redirectUrl);
         } catch (\Laravel\Socialite\Two\InvalidStateException $e) {
@@ -251,12 +241,105 @@ class SocialAuthController extends BaseApiController
     }
 
     /**
+     * Callback URL for social auth: TikTok uses fixed frontend URL (live app); others use backend.
+     */
+    private function getSocialAuthCallbackUrl(string $provider): string
+    {
+        if ($provider === 'tiktok') {
+            $fixed = config('app.tiktok_oauth_callback_url');
+            if ($fixed !== null && $fixed !== '') {
+                return rtrim($fixed, '/');
+            }
+            $base = $this->normalizeFrontendUrl(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')));
+            return $base . '/app/tiktok/profile';
+        }
+
+        $appUrl = config('app.url', env('APP_URL', 'http://localhost:8000'));
+        return rtrim($appUrl, '/') . "/api/v1/auth/social/{$provider}/callback";
+    }
+
+    private function normalizeFrontendUrl(string $url): string
+    {
+        $parsed = parse_url($url);
+        if (!isset($parsed['host'])) {
+            return rtrim($url, '/');
+        }
+        $host = $parsed['host'];
+        if (str_starts_with(strtolower($host), 'www.')) {
+            $parsed['host'] = substr($host, 4);
+            $scheme = isset($parsed['scheme']) ? $parsed['scheme'] . '://' : 'http://';
+            $url = $scheme . $parsed['host'] . (isset($parsed['port']) ? ':' . $parsed['port'] : '') . (isset($parsed['path']) ? $parsed['path'] : '') . (isset($parsed['query']) ? '?' . $parsed['query'] : '') . (isset($parsed['fragment']) ? '#' . $parsed['fragment'] : '');
+        }
+        return rtrim($url, '/');
+    }
+
+    /**
+     * Exchange OAuth code for token when TikTok redirects to frontend (e.g. https://ucontents.com/app/tiktok/profile).
+     * Called by frontend after provider redirects with ?code=&state=
+     */
+    public function exchangeCode(Request $request, string $provider): JsonResponse
+    {
+        if ($provider !== 'tiktok') {
+            return $this->error('Exchange code is only supported for TikTok', 400);
+        }
+
+        $socialAuthEnabled = $this->settingsService->get('features.social_auth.enabled', false);
+        if (!$socialAuthEnabled) {
+            return $this->error('Social authentication is disabled', 403);
+        }
+
+        $enabledProviders = $this->settingsService->get('features.social_auth.providers', []);
+        if (!in_array($provider, $enabledProviders)) {
+            return $this->error('TikTok authentication is not enabled', 403);
+        }
+
+        $config = $this->settingsService->get("features.social_auth.provider_configs.{$provider}", []);
+        $clientId = $config['client_id'] ?? null;
+        $clientSecret = $config['client_secret'] ?? null;
+        $mode = $config['mode'] ?? null;
+
+        if (!$clientId || !$clientSecret) {
+            return $this->error('TikTok is not properly configured', 400);
+        }
+
+        $code = $request->input('code');
+        $state = $request->input('state');
+        $redirectUri = $request->input('redirect_uri');
+
+        if (empty($code) || empty($state)) {
+            return $this->error('Missing code or state', 400);
+        }
+
+        $callbackUrl = $redirectUri !== null && $redirectUri !== ''
+            ? preg_replace('/[#?].*$/', '', $redirectUri)
+            : $this->getSocialAuthCallbackUrl($provider);
+
+        $request->merge(['code' => $code, 'state' => $state]);
+
+        try {
+            $driver = $this->getSocialiteDriver($provider, $clientId, $clientSecret, $callbackUrl, $mode)
+                ->stateless();
+            $socialiteUser = $driver->user();
+
+            $result = $this->socialAuthAction->execute($provider, $socialiteUser);
+            $token = $result['token'];
+            $frontendUrl = $this->normalizeFrontendUrl(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')));
+            $redirectUrl = $frontendUrl . "/auth/social/callback?token={$token}";
+
+            return $this->success(['token' => $token, 'redirect_url' => $redirectUrl], 'OK');
+        } catch (\Exception $e) {
+            Log::error('Social auth exchange-code failed for TikTok: ' . $e->getMessage());
+            return $this->error('Authentication failed. Please try again.', 400);
+        }
+    }
+
+    /**
      * Redirect to frontend with error
      */
     private function redirectWithError(string $message): RedirectResponse
     {
-        $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', env('APP_URL', 'http://localhost:3000')));
+        $frontendUrl = $this->normalizeFrontendUrl(config('app.frontend_url', env('FRONTEND_URL', env('APP_URL', 'http://localhost:3000'))));
         $error = urlencode($message);
-        return redirect(rtrim($frontendUrl, '/') . "/auth/login?error={$error}");
+        return redirect($frontendUrl . "/auth/login?error={$error}");
     }
 }

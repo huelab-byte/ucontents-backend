@@ -52,6 +52,7 @@ Route::prefix('v1')->group(function () {
             Route::prefix('social')->group(function () {
                 Route::get('/{provider}', [SocialAuthController::class, 'redirect'])->where('provider', 'google|facebook|tiktok');
                 Route::get('/{provider}/callback', [SocialAuthController::class, 'callback'])->where('provider', 'google|facebook|tiktok');
+                Route::post('/tiktok/exchange-code', [SocialAuthController::class, 'exchangeCode']);
             });
         });
 

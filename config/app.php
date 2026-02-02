@@ -60,13 +60,22 @@ return [
     |--------------------------------------------------------------------------
     | OAuth redirect URI base
     |--------------------------------------------------------------------------
-    | When set, OAuth providers (e.g. Meta) will redirect to the frontend domain
-    | instead of the backend. Use this when frontend (e.g. ucontents.com) and
-    | backend (e.g. app.ucontents.com) differ to avoid provider blocking.
-    | Callback paths: {frontend_url}/app/tiktok/profile, /app/youtube/channel,
-    | /app/facebook/profile, /app/facebook/page, /app/instagram/profile
+    | When true, OAuth providers redirect to the frontend domain (FRONTEND_URL).
+    | Use frontend callback so the app works when frontend (e.g. ucontents.com)
+    | and backend (e.g. app.ucontents.com) differ. Production: use domain without www.
+    | Callback paths: {frontend_url}/app/facebook/page, /app/facebook/profile,
+    | /app/instagram/profile, /app/youtube/channel, /app/tiktok/profile
     */
-    'oauth_redirect_use_frontend' => (bool) env('OAUTH_REDIRECT_USE_FRONTEND', false),
+    'oauth_redirect_use_frontend' => (bool) env('OAUTH_REDIRECT_USE_FRONTEND', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | TikTok OAuth callback URL (fixed for live app)
+    |--------------------------------------------------------------------------
+    | TikTok does not allow editing callback URL for a live app. Use this exact
+    | URL for both social login and add connection. Default: main domain without www.
+    */
+    'tiktok_oauth_callback_url' => env('TIKTOK_OAUTH_CALLBACK_URL', null),
 
     /*
     |--------------------------------------------------------------------------

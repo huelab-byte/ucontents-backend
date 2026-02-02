@@ -24,7 +24,7 @@
         "pbmedia/laravel-ffmpeg": "*",
         "predis/predis": "*",
         "pusher/pusher-php-server": "^7.2",
-        "socialiteproviders/tiktok": "^4.0",
+        "socialiteproviders/tiktok": "^5.0",
         "stripe/stripe-php": "^19.2",
         "tymon/jwt-auth": "*"
     },
