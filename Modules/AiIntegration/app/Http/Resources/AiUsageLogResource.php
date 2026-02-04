@@ -33,9 +33,13 @@ class AiUsageLogResource extends JsonResource
             'module' => $this->module,
             'feature' => $this->feature,
             'user' => $this->whenLoaded('user'),
+            'provider' => $this->apiKey?->provider ? [
+                'name' => $this->apiKey->provider->name,
+                'slug' => $this->apiKey->provider->slug,
+            ] : null,
             'created_at' => $this->created_at instanceof \DateTimeInterface 
-                ? $this->created_at->toISOString() 
-                : ($this->created_at ? (new \Carbon\Carbon($this->created_at))->toISOString() : null),
+                ? $this->created_at->toIso8601String() 
+                : ($this->created_at ? \Illuminate\Support\Carbon::parse($this->created_at)->toIso8601String() : null),
         ];
     }
 }

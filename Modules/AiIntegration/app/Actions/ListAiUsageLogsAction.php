@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\AiIntegration\Actions;
 
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Modules\AiIntegration\DTOs\AiUsageFilterDTO;
 use Modules\AiIntegration\Models\AiUsageLog;
 
@@ -25,7 +25,9 @@ class ListAiUsageLogsAction
         
         // Use separate with() calls to prevent total failure if one relationship is broken
         $query->with(['user', 'apiKey' => function($q) {
-            $q->withTrashed()->with('provider');
+            $q->withTrashed()->with(['provider' => function($pq) {
+                $pq->withTrashed();
+            }]);
         }]);
 
         // Filter by provider

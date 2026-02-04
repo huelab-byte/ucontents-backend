@@ -253,9 +253,11 @@ class BaseApiController extends Controller
         // Return generic error response
         $errorMessage = $message ?? 'An error occurred while processing your request.';
         
-        // In development, include exception message
+        // Include exception message to help debug PROD issues temporarily
+        $errorMessage .= ' Error: ' . $exception->getMessage();
+        
         if (config('app.debug')) {
-            $errorMessage .= ' ' . $exception->getMessage();
+            $errorMessage .= ' File: ' . $exception->getFile() . ' Line: ' . $exception->getLine();
         }
 
         return $this->error($errorMessage, 500);
