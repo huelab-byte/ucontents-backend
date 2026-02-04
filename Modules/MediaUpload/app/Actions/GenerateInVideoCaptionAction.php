@@ -26,27 +26,61 @@ class GenerateInVideoCaptionAction
     public function executeFromText(string $context, int $wordsPerCaption, ?int $userId = null): string
     {
         $cfg = config('mediaupload.module.content_generation', []);
-        $provider = $cfg['ai_provider'] ?? 'openai';
-        $model = $cfg['text_model'] ?? 'gpt-4o';
-        $prompt = $this->buildTextPrompt($context, $wordsPerCaption);
+        $primaryProvider = $cfg['ai_provider'] ?? 'openai';
+        $primaryModel = $cfg['text_model'] ?? 'gpt-4o';
 
-        $apiKey = $this->apiKeyService->getBestApiKeyForScope($provider, 'text_caption');
-        if (!$apiKey) {
-            throw new \RuntimeException('No AI API key available for in-video caption generation');
+        // Build list of providers to try: Primary + Fallbacks
+        $attempts = [['provider' => $primaryProvider, 'model' => $primaryModel]];
+
+        if (!empty($cfg['text_fallbacks'])) {
+            foreach ($cfg['text_fallbacks'] as $fallback) {
+                // Avoid duplicates
+                $exists = false;
+                foreach ($attempts as $a) {
+                    if ($a['provider'] === $fallback['provider'] && $a['model'] === $fallback['model']) {
+                        $exists = true;
+                        break;
+                    }
+                }
+                if (!$exists) {
+                    $attempts[] = $fallback;
+                }
+            }
         }
 
-        $dto = new AiModelCallDTO(
-            providerSlug: $provider,
-            model: $model,
-            prompt: $prompt,
-            settings: ['temperature' => 0.5, 'max_tokens' => 100],
-            module: 'MediaUpload',
-            feature: 'in_video_caption',
-            scope: 'text_caption',
-        );
-        $res = $this->aiService->callModel($dto, $userId);
-        $text = trim($res['content'] ?? $res['message'] ?? '');
-        return $this->cleanCaption($text, $wordsPerCaption);
+        $prompt = $this->buildTextPrompt($context, $wordsPerCaption);
+        $lastException = null;
+
+        foreach ($attempts as $attempt) {
+            try {
+                $providerSlug = $attempt['provider'];
+                $model = $attempt['model'];
+
+                $apiKey = $this->apiKeyService->getBestApiKeyForScope($providerSlug, 'text_caption', null, $userId);
+                if (!$apiKey) {
+                    continue;
+                }
+
+                $dto = new AiModelCallDTO(
+                    providerSlug: $providerSlug,
+                    model: $model,
+                    prompt: $prompt,
+                    settings: ['temperature' => 0.5, 'max_tokens' => 100],
+                    module: 'MediaUpload',
+                    feature: 'in_video_caption',
+                    scope: 'text_caption',
+                );
+                $res = $this->aiService->callModel($dto, $userId);
+                $text = trim($res['content'] ?? $res['message'] ?? '');
+                return $this->cleanCaption($text, $wordsPerCaption);
+            } catch (\Exception $e) {
+                $lastException = $e;
+                \Log::warning("In-video text caption generation failed for provider {$attempt['provider']}: " . $e->getMessage());
+                continue;
+            }
+        }
+
+        throw new \RuntimeException('Failed to generate in-video text caption. All AI providers failed. Last error: ' . ($lastException ? $lastException->getMessage() : 'No active API keys found.'));
     }
 
     /**
@@ -55,29 +89,63 @@ class GenerateInVideoCaptionAction
     public function executeFromFrames(string $mergedFramePath, string $title, int $wordsPerCaption, ?int $userId = null): string
     {
         $cfg = config('mediaupload.module.content_generation', []);
-        $provider = $cfg['ai_provider'] ?? 'openai';
-        $model = $cfg['vision_model'] ?? 'gpt-4o';
-        $prompt = $this->buildVisionPrompt($title, $wordsPerCaption);
-        $image = base64_encode(file_get_contents($mergedFramePath));
+        $primaryProvider = $cfg['ai_provider'] ?? 'openai';
+        $primaryModel = $cfg['vision_model'] ?? 'gpt-4o';
 
-        $apiKey = $this->apiKeyService->getBestApiKeyForScope($provider, 'vision_caption');
-        if (!$apiKey) {
-            throw new \RuntimeException('No AI API key available for in-video caption generation');
+        // Build list of providers to try: Primary + Fallbacks
+        $attempts = [['provider' => $primaryProvider, 'model' => $primaryModel]];
+
+        if (!empty($cfg['vision_fallbacks'])) {
+            foreach ($cfg['vision_fallbacks'] as $fallback) {
+                // Avoid duplicates
+                $exists = false;
+                foreach ($attempts as $a) {
+                    if ($a['provider'] === $fallback['provider'] && $a['model'] === $fallback['model']) {
+                        $exists = true;
+                        break;
+                    }
+                }
+                if (!$exists) {
+                    $attempts[] = $fallback;
+                }
+            }
         }
 
-        $dto = new AiModelCallDTO(
-            providerSlug: $provider,
-            model: $model,
-            prompt: $prompt,
-            settings: ['temperature' => 0.5, 'max_tokens' => 100],
-            module: 'MediaUpload',
-            feature: 'in_video_caption',
-            metadata: ['image' => $image, 'image_format' => 'base64'],
-            scope: 'vision_caption',
-        );
-        $res = $this->aiService->callModel($dto, $userId);
-        $text = trim($res['content'] ?? $res['message'] ?? '');
-        return $this->cleanCaption($text, $wordsPerCaption);
+        $prompt = $this->buildVisionPrompt($title, $wordsPerCaption);
+        $image = base64_encode(file_get_contents($mergedFramePath));
+        $lastException = null;
+
+        foreach ($attempts as $attempt) {
+            try {
+                $providerSlug = $attempt['provider'];
+                $model = $attempt['model'];
+
+                $apiKey = $this->apiKeyService->getBestApiKeyForScope($providerSlug, 'vision_caption', null, $userId);
+                if (!$apiKey) {
+                    continue;
+                }
+
+                $dto = new AiModelCallDTO(
+                    providerSlug: $providerSlug,
+                    model: $model,
+                    prompt: $prompt,
+                    settings: ['temperature' => 0.5, 'max_tokens' => 100],
+                    module: 'MediaUpload',
+                    feature: 'in_video_caption',
+                    metadata: ['image' => $image, 'image_format' => 'base64'],
+                    scope: 'vision_caption',
+                );
+                $res = $this->aiService->callModel($dto, $userId);
+                $text = trim($res['content'] ?? $res['message'] ?? '');
+                return $this->cleanCaption($text, $wordsPerCaption);
+            } catch (\Exception $e) {
+                $lastException = $e;
+                \Log::warning("In-video vision caption generation failed for provider {$attempt['provider']}: " . $e->getMessage());
+                continue;
+            }
+        }
+
+        throw new \RuntimeException('Failed to generate in-video vision caption. All AI providers failed. Last error: ' . ($lastException ? $lastException->getMessage() : 'No active API keys found.'));
     }
 
     private function buildTextPrompt(string $context, int $wordsPerCaption): string

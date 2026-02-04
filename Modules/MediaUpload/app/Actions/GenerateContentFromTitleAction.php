@@ -23,27 +23,68 @@ class GenerateContentFromTitleAction
     public function execute(string $title, array $opts, ?int $userId = null): array
     {
         $cfg = config('mediaupload.module.content_generation', []);
-        $provider = $cfg['ai_provider'] ?? 'openai';
-        $model = $cfg['text_model'] ?? 'gpt-4o';
-        $prompt = $this->buildPrompt($title, $opts);
+        $primaryProvider = $cfg['ai_provider'] ?? 'openai';
+        $primaryModel = $cfg['text_model'] ?? 'gpt-4o';
 
-        $apiKey = $this->apiKeyService->getBestApiKey($provider);
-        if (!$apiKey) {
-            throw new \RuntimeException('No AI API key available for content generation');
+        // Build list of providers to try: Primary + Fallbacks
+        $attempts = [['provider' => $primaryProvider, 'model' => $primaryModel]];
+
+        if (!empty($cfg['text_fallbacks'])) {
+            foreach ($cfg['text_fallbacks'] as $fallback) {
+                // Avoid duplicates
+                $exists = false;
+                foreach ($attempts as $a) {
+                    if ($a['provider'] === $fallback['provider'] && $a['model'] === $fallback['model']) {
+                        $exists = true;
+                        break;
+                    }
+                }
+                if (!$exists) {
+                    $attempts[] = $fallback;
+                }
+            }
         }
 
-        $dto = new AiModelCallDTO(
-            providerSlug: $provider,
-            model: $model,
-            prompt: $prompt,
-            settings: ['temperature' => 0.7, 'max_tokens' => 1500],
-            module: 'MediaUpload',
-            feature: 'content_generation',
-            scope: 'text_content',
+        $prompt = $this->buildPrompt($title, $opts);
+        $lastException = null;
+
+        foreach ($attempts as $attempt) {
+            try {
+                $providerSlug = $attempt['provider'];
+                $model = $attempt['model'];
+
+                $apiKey = $this->apiKeyService->getBestApiKeyForScope($providerSlug, 'text_content', null, $userId);
+                
+                if (!$apiKey) {
+                    continue;
+                }
+
+                $dto = new AiModelCallDTO(
+                    providerSlug: $providerSlug,
+                    model: $model,
+                    prompt: $prompt,
+                    settings: ['temperature' => 0.7, 'max_tokens' => 1500],
+                    module: 'MediaUpload',
+                    feature: 'content_generation',
+                    scope: 'text_content',
+                );
+
+                $res = $this->aiService->callModel($dto, $userId);
+                $text = $res['content'] ?? $res['message'] ?? '';
+                
+                return $this->parseResponse($text, $title, $opts);
+
+            } catch (\Exception $e) {
+                $lastException = $e;
+                \Log::warning("AI text content generation failed for provider {$attempt['provider']}: " . $e->getMessage());
+                continue;
+            }
+        }
+
+        throw new \RuntimeException(
+            'Failed to generate content. All AI text providers failed. Last error: ' . 
+            ($lastException ? $lastException->getMessage() : 'No active API keys found.')
         );
-        $res = $this->aiService->callModel($dto, $userId);
-        $text = $res['content'] ?? $res['message'] ?? '';
-        return $this->parseResponse($text, $title, $opts);
     }
 
     private function buildPrompt(string $title, array $opts): string
