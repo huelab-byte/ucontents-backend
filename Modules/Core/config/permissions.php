@@ -104,6 +104,7 @@ return [
     'manage_prompt_templates' => 'Full access to prompt template management',
     'call_ai_models' => 'Call AI models (customer)',
     'use_prompt_templates' => 'Use prompt templates (customer)',
+    'use_ai_chat' => 'Use AI chat interface (customer)',
 
     // Social Connection
     'manage_social_connection_providers' => 'Manage SocialConnection provider apps (OAuth credentials, scopes, enable/disable)',

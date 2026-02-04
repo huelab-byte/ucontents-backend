@@ -54,6 +54,11 @@ class AiIntegrationServiceProvider extends ServiceProvider
             \Modules\AiIntegration\Models\AiUsageLog::class,
             \Modules\AiIntegration\Policies\AiUsageLogPolicy::class
         );
+
+        \Illuminate\Support\Facades\Gate::policy(
+            \Modules\AiIntegration\Services\ExternalAiChatService::class,
+            \Modules\AiIntegration\Policies\AiChatPolicy::class
+        );
     }
 
     /**

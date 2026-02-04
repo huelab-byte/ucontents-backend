@@ -43,6 +43,7 @@ class SeedAiIntegrationPermissions extends Command
             'manage_prompt_templates' => $allPermissions['manage_prompt_templates'] ?? 'Full access to prompt template management',
             'call_ai_models' => $allPermissions['call_ai_models'] ?? 'Call AI models (customer)',
             'use_prompt_templates' => $allPermissions['use_prompt_templates'] ?? 'Use prompt templates (customer)',
+            'use_ai_chat' => $allPermissions['use_ai_chat'] ?? 'Use AI chat interface (customer)',
         ];
 
         $created = 0;

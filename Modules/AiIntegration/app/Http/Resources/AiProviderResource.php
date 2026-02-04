@@ -22,6 +22,8 @@ class AiProviderResource extends JsonResource
             'slug' => $this->slug,
             'name' => $this->name,
             'supported_models' => $this->supported_models,
+            'vision_models' => $this->config['vision_models'] ?? [],
+            'embedding_models' => $this->config['embedding_models'] ?? [],
             'base_url' => $this->base_url,
             'is_active' => $this->is_active,
             'has_active_keys' => $this->hasActiveKeys(),

@@ -39,6 +39,7 @@ class GenerateContentFromPromptAction
             settings: ['temperature' => 0.7, 'max_tokens' => 1500],
             module: 'MediaUpload',
             feature: 'content_generation',
+            scope: 'text_content',
         );
         $res = $this->aiService->callModel($dto, $userId);
         $text = $res['content'] ?? $res['message'] ?? '';
@@ -111,15 +112,82 @@ PROMPT;
 
     private function extractJson(string $text): ?array
     {
-        $text = preg_replace('/^.*?```(?:json)?\s*/s', '', $text);
-        $text = preg_replace('/\s*```.*$/s', '', $text);
-        $text = trim($text);
-        if (preg_match('/\{[\s\S]*\}/', $text, $m)) {
-            $dec = json_decode($m[0], true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($dec)) {
-                return $dec;
+        // Remove markdown code blocks wrapper if they exist
+        if (preg_match('/```(?:json)?\s*([\s\S]*?)\s*```/i', $text, $matches)) {
+            $text = $matches[1];
+        }
+
+        // Try to decode the whole text first (fast path)
+        $decoded = json_decode($text, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return $decoded;
+        }
+
+        // Scan for JSON objects using brace balancing
+        $candidates = [];
+        $balance = 0;
+        $start = -1;
+        $len = strlen($text);
+        $inString = false;
+        $escape = false;
+
+        for ($i = 0; $i < $len; $i++) {
+            $char = $text[$i];
+
+            if ($escape) {
+                $escape = false;
+                continue;
+            }
+
+            if ($char === '\\') {
+                $escape = true;
+                continue;
+            }
+
+            if ($char === '"') {
+                $inString = !$inString;
+                continue;
+            }
+
+            if ($inString) {
+                continue;
+            }
+
+            if ($char === '{') {
+                if ($balance === 0) {
+                    $start = $i;
+                }
+                $balance++;
+            } elseif ($char === '}') {
+                if ($balance > 0) {
+                    $balance--;
+                    if ($balance === 0 && $start !== -1) {
+                        $jsonStr = substr($text, $start, $i - $start + 1);
+                        $decoded = json_decode($jsonStr, true);
+                        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                            $candidates[] = $decoded;
+                        }
+                        // We reset start to look for the next object
+                        $start = -1; 
+                    }
+                }
             }
         }
+
+        // Return the last valid candidate that has at least one expected key
+        // Iterating backwards to prioritize the final response over any examples in the prompt
+        for ($i = count($candidates) - 1; $i >= 0; $i--) {
+            $c = $candidates[$i];
+            if (isset($c['youtube_heading']) || isset($c['social_caption']) || isset($c['hashtags'])) {
+                return $c;
+            }
+        }
+
+        // Fallback: Return the last candidate found found (best effort)
+        if (!empty($candidates)) {
+            return end($candidates);
+        }
+
         return null;
     }
 }

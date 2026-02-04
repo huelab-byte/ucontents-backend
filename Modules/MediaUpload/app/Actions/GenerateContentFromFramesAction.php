@@ -18,28 +18,64 @@ class GenerateContentFromFramesAction
     public function execute(string $mergedFramePath, string $title, array $opts, ?int $userId = null): array
     {
         $cfg = config('mediaupload.module.content_generation', []);
-        $provider = $cfg['ai_provider'] ?? 'openai';
-        $model = $cfg['vision_model'] ?? 'gpt-4o';
-        $prompt = $this->buildPrompt($title, $opts);
-        $image = base64_encode(file_get_contents($mergedFramePath));
-
-        $apiKey = $this->apiKeyService->getBestApiKey($provider);
-        if (!$apiKey) {
-            throw new \RuntimeException('No AI API key available for content generation');
+        $primaryProvider = $cfg['ai_provider'] ?? 'openai';
+        $primaryModel = $cfg['vision_model'] ?? 'gpt-4o';
+        
+        // Build list of providers to try: Primary + Fallbacks
+        $attempts = [['provider' => $primaryProvider, 'model' => $primaryModel]];
+        
+        if (!empty($cfg['vision_fallbacks'])) {
+            foreach ($cfg['vision_fallbacks'] as $fallback) {
+                // Avoid duplicates
+                if ($fallback['provider'] !== $primaryProvider || $fallback['model'] !== $primaryModel) {
+                    $attempts[] = $fallback;
+                }
+            }
         }
 
-        $dto = new AiModelCallDTO(
-            providerSlug: $provider,
-            model: $model,
-            prompt: $prompt,
-            settings: ['temperature' => 0.7, 'max_tokens' => 1500],
-            module: 'MediaUpload',
-            feature: 'content_generation',
-            metadata: ['image' => $image, 'image_format' => 'base64'],
+        $prompt = $this->buildPrompt($title, $opts);
+        $image = base64_encode(file_get_contents($mergedFramePath));
+        $lastException = null;
+
+        foreach ($attempts as $attempt) {
+            try {
+                $providerSlug = $attempt['provider'];
+                $model = $attempt['model'];
+
+                $apiKey = $this->apiKeyService->getBestApiKey($providerSlug);
+                
+                if (!$apiKey) {
+                    continue; // No key for this provider, try next
+                }
+
+                $dto = new AiModelCallDTO(
+                    providerSlug: $providerSlug,
+                    model: $model,
+                    prompt: $prompt,
+                    settings: ['temperature' => 0.7, 'max_tokens' => 1500],
+                    module: 'MediaUpload',
+                    feature: 'content_generation',
+                    metadata: ['image' => $image, 'image_format' => 'base64'],
+                    scope: 'vision_content',
+                );
+
+                $res = $this->aiService->callModel($dto, $userId);
+                $text = $res['content'] ?? $res['message'] ?? '';
+                
+                return $this->parseResponse($text, $title, $opts);
+
+            } catch (\Exception $e) {
+                $lastException = $e;
+                \Log::warning("AI content generation failed for provider {$attempt['provider']}: " . $e->getMessage());
+                continue; // Try next fallback
+            }
+        }
+
+        // If we get here, all attempts failed
+        throw new \RuntimeException(
+            'Failed to generate content. All AI providers failed. Last error: ' . 
+            ($lastException ? $lastException->getMessage() : 'No active API keys found.')
         );
-        $res = $this->aiService->callModel($dto, $userId);
-        $text = $res['content'] ?? $res['message'] ?? '';
-        return $this->parseResponse($text, $title, $opts);
     }
 
     private function buildPrompt(string $title, array $opts): string
@@ -56,16 +92,14 @@ class GenerateContentFromFramesAction
         return <<<PROMPT
 You are a social media content expert. The image shows 6 frames from a video merged into a grid.
 
-Video title: "{$title}"
-
 Analyze the visual content and create engaging content.
 
 CRITICAL LENGTH REQUIREMENTS - YOU MUST FOLLOW THESE EXACTLY:
 1. YouTube Heading: EXACTLY {$headingWords} words (not more, not less). {$emojiLine}
-2. Social Caption: EXACTLY {$captionWords} words (not more, not less). Include a hook and call-to-action.
+2. Social Caption: EXACTLY {$captionWords} words (not more, not less). Include a hook and call-to-action. Do NOT include hashtags in this field.
 3. Hashtags: EXACTLY {$hc} hashtags with # symbol.
 
-Create ORIGINAL content based on what you see. Do NOT just repeat the title.
+Create ORIGINAL content based SOLELY on what you see in the images.
 
 Return ONLY a valid JSON object:
 {"youtube_heading": "...", "social_caption": "...", "hashtags": ["#tag1", "#tag2", ...]}
@@ -85,11 +119,19 @@ PROMPT;
                 $t = trim((string) $t);
                 return $t !== '' && ($t[0] ?? '') !== '#' ? '#' . $t : $t;
             }, $tags), 0, $hc);
+            
             $heading = $json['youtube_heading'] ?? 'Video: ' . $title;
             $heading = $this->ensureHeadingEmoji($heading, $opts);
+            
+            // Clean caption - Remove any hash tags that might have slipped into the caption
+            $caption = $json['social_caption'] ?? '';
+            // Remove hashtags at the end of the caption
+            $caption = preg_replace('/(\s*#\w+)+$/u', '', $caption);
+            $caption = trim($caption);
+
             return [
                 'youtube_heading' => $heading,
-                'social_caption' => $json['social_caption'] ?? '',
+                'social_caption' => $caption,
                 'hashtags' => $tags,
             ];
         }
@@ -110,15 +152,82 @@ PROMPT;
 
     private function extractJson(string $text): ?array
     {
-        $text = preg_replace('/^.*?```(?:json)?\s*/s', '', $text);
-        $text = preg_replace('/\s*```.*$/s', '', $text);
-        $text = trim($text);
-        if (preg_match('/\{[\s\S]*\}/', $text, $m)) {
-            $dec = json_decode($m[0], true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($dec)) {
-                return $dec;
+        // Remove markdown code blocks wrapper if they exist
+        if (preg_match('/```(?:json)?\s*([\s\S]*?)\s*```/i', $text, $matches)) {
+            $text = $matches[1];
+        }
+
+        // Try to decode the whole text first (fast path)
+        $decoded = json_decode($text, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return $decoded;
+        }
+
+        // Scan for JSON objects using brace balancing
+        $candidates = [];
+        $balance = 0;
+        $start = -1;
+        $len = strlen($text);
+        $inString = false;
+        $escape = false;
+
+        for ($i = 0; $i < $len; $i++) {
+            $char = $text[$i];
+
+            if ($escape) {
+                $escape = false;
+                continue;
+            }
+
+            if ($char === '\\') {
+                $escape = true;
+                continue;
+            }
+
+            if ($char === '"') {
+                $inString = !$inString;
+                continue;
+            }
+
+            if ($inString) {
+                continue;
+            }
+
+            if ($char === '{') {
+                if ($balance === 0) {
+                    $start = $i;
+                }
+                $balance++;
+            } elseif ($char === '}') {
+                if ($balance > 0) {
+                    $balance--;
+                    if ($balance === 0 && $start !== -1) {
+                        $jsonStr = substr($text, $start, $i - $start + 1);
+                        $decoded = json_decode($jsonStr, true);
+                        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                            $candidates[] = $decoded;
+                        }
+                        // We reset start to look for the next object
+                        $start = -1; 
+                    }
+                }
             }
         }
+
+        // Return the last valid candidate that has at least one expected key
+        // Iterating backwards to prioritize the final response over any examples in the prompt
+        for ($i = count($candidates) - 1; $i >= 0; $i--) {
+            $c = $candidates[$i];
+            if (isset($c['youtube_heading']) || isset($c['social_caption']) || isset($c['hashtags'])) {
+                return $c;
+            }
+        }
+
+        // Fallback: Return the last candidate found found (best effort)
+        if (!empty($candidates)) {
+            return end($candidates);
+        }
+
         return null;
     }
 }

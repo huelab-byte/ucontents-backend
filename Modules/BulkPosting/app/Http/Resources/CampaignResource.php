@@ -65,6 +65,7 @@ class CampaignResource extends JsonResource
             'repostInterval' => $this->repost_interval,
             'repostMaxCount' => $this->repost_max_count,
             'contentSourceConfig' => $this->content_source_config,
+            'lastPostAt' => $this->last_post_at?->toISOString(),
         ];
     }
 

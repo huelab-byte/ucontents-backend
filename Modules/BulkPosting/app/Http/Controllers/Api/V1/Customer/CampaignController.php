@@ -166,6 +166,9 @@ class CampaignController extends BaseApiController
 
         return response()->download($samplePath, 'bulk-posting-sample.csv', [
             'Content-Type' => 'text/csv',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
         ]);
     }
 }

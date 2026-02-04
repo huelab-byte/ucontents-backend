@@ -24,6 +24,7 @@ class AdapterFactory
             'openai', 'azure_openai', 'deepseek', 'xai' => new OpenAiAdapter(),
             'anthropic' => new AnthropicAdapter(),
             'google' => new GoogleGeminiAdapter(),
+            'ucontents' => new UcontentsAdapter(),
             default => throw new \Exception("Unsupported provider: {$provider->slug}"),
         };
     }

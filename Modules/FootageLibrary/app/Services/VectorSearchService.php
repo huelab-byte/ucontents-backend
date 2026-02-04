@@ -169,6 +169,7 @@ class VectorSearchService
             prompt: $text,
             module: 'FootageLibrary',
             feature: 'search_embedding',
+            scope: 'embedding',
         );
 
         $response = $this->aiService->callModel($dto);

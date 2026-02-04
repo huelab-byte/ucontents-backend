@@ -42,6 +42,7 @@ class GenerateInVideoCaptionAction
             settings: ['temperature' => 0.5, 'max_tokens' => 100],
             module: 'MediaUpload',
             feature: 'in_video_caption',
+            scope: 'text_caption',
         );
         $res = $this->aiService->callModel($dto, $userId);
         $text = trim($res['content'] ?? $res['message'] ?? '');
@@ -72,6 +73,7 @@ class GenerateInVideoCaptionAction
             module: 'MediaUpload',
             feature: 'in_video_caption',
             metadata: ['image' => $image, 'image_format' => 'base64'],
+            scope: 'vision_caption',
         );
         $res = $this->aiService->callModel($dto, $userId);
         $text = trim($res['content'] ?? $res['message'] ?? '');

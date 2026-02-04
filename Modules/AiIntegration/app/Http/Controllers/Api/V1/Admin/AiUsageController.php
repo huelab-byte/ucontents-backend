@@ -29,16 +29,20 @@ class AiUsageController extends BaseApiController
      */
     public function index(ListAiUsageRequest $request): JsonResponse
     {
-        $this->authorize('viewAny', AiUsageLog::class);
+        try {
+            $this->authorize('viewAny', AiUsageLog::class);
 
-        $dto = AiUsageFilterDTO::fromArray($request->validated());
-        $logs = $this->listAiUsageLogsAction->execute($dto);
+            $dto = AiUsageFilterDTO::fromArray($request->validated());
+            $logs = $this->listAiUsageLogsAction->execute($dto);
 
-        return $this->paginatedResource(
-            $logs,
-            AiUsageLogResource::class,
-            'Usage logs retrieved successfully'
-        );
+            return $this->paginatedResource(
+                $logs,
+                AiUsageLogResource::class,
+                'Usage logs retrieved successfully'
+            );
+        } catch (\Throwable $e) {
+            return $this->handleException($e);
+        }
     }
 
     /**
@@ -46,11 +50,15 @@ class AiUsageController extends BaseApiController
      */
     public function statistics(ListAiUsageRequest $request): JsonResponse
     {
-        $this->authorize('viewAny', AiUsageLog::class);
+        try {
+            $this->authorize('viewAny', AiUsageLog::class);
 
-        $dto = AiUsageFilterDTO::fromArray($request->validated());
-        $stats = $this->getAiUsageStatisticsAction->execute($dto);
+            $dto = AiUsageFilterDTO::fromArray($request->validated());
+            $stats = $this->getAiUsageStatisticsAction->execute($dto);
 
-        return $this->success(new AiUsageStatisticsResource($stats), 'Usage statistics retrieved successfully');
+            return $this->success(new AiUsageStatisticsResource($stats), 'Usage statistics retrieved successfully');
+        } catch (\Throwable $e) {
+            return $this->handleException($e);
+        }
     }
 }

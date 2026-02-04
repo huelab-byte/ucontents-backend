@@ -58,7 +58,7 @@ class FootageLibraryDatabaseSeeder extends Seeder
         if ($superAdmin) {
             $existingPermissionIds = $superAdmin->permissions()->pluck('permissions.id')->toArray();
             $newPermissionIds = array_unique(array_merge($existingPermissionIds, $permissionIds));
-            $superAdmin->permissions()->sync($newPermissionIds);
+            $superAdmin->permissions()->syncWithoutDetaching($newPermissionIds);
             $this->command->info('FootageLibrary permissions assigned to Super Admin role.');
         }
 
@@ -67,7 +67,7 @@ class FootageLibraryDatabaseSeeder extends Seeder
         if ($admin) {
             $existingPermissionIds = $admin->permissions()->pluck('permissions.id')->toArray();
             $newPermissionIds = array_unique(array_merge($existingPermissionIds, $adminPermissions));
-            $admin->permissions()->sync($newPermissionIds);
+            $admin->permissions()->syncWithoutDetaching($newPermissionIds);
             $this->command->info('FootageLibrary permissions assigned to Admin role.');
         }
     }

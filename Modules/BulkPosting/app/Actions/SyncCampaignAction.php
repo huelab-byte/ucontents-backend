@@ -86,6 +86,7 @@ class SyncCampaignAction
                 'caption' => $media->social_caption ?? $media->title ?? '',
                 'media_urls' => $mediaUrl ? [$mediaUrl] : [],
                 'hashtags' => is_array($media->hashtags) ? $media->hashtags : [],
+                'youtube_heading' => $media->youtube_heading,
             ];
 
             BulkPostingContentItem::create([

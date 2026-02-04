@@ -29,7 +29,7 @@ class AiModelCallService
         $startTime = microtime(true);
 
         // Get API key
-        $apiKey = $this->getApiKey($dto);
+        $apiKey = $this->getApiKey($dto, $userId);
         
         if (!$apiKey) {
             throw new \Exception("No available API key for provider: {$dto->providerSlug}");
@@ -73,15 +73,22 @@ class AiModelCallService
     }
 
     /**
-     * Get API key for the request
+     * Get API key for the request using scope-based selection
+     * 
+     * Priority:
+     * 1. If apiKeyId is specified, use that key (if it supports the scope)
+     * 2. If scope is specified, find a key that supports that scope
+     * 3. Fall back to any available key for the provider
      */
-    private function getApiKey(AiModelCallDTO $dto): ?AiApiKey
+    private function getApiKey(AiModelCallDTO $dto, ?int $userId = null): ?AiApiKey
     {
-        if ($dto->apiKeyId) {
-            return $this->apiKeyService->getBestApiKey($dto->providerSlug, $dto->apiKeyId);
-        }
-
-        return $this->apiKeyService->getBestApiKey($dto->providerSlug);
+        // Use scope-based selection
+        return $this->apiKeyService->getBestApiKeyForScope(
+            $dto->providerSlug,
+            $dto->scope,
+            $dto->apiKeyId,
+            $userId
+        );
     }
 
     /**
@@ -125,35 +132,64 @@ class AiModelCallService
             return null;
         }
 
-        // Pricing per 1M tokens (approximate)
+        // Pricing per 1M tokens (approximate blended input/output rate)
         $pricing = [
             'openai' => [
                 'gpt-4o' => 5.0,
                 'gpt-4o-mini' => 0.15,
                 'gpt-4-turbo' => 10.0,
+                'gpt-4-vision-preview' => 10.0,
                 'gpt-4' => 30.0,
                 'gpt-3.5-turbo' => 0.5,
+                'gpt-3.5-turbo-instruct' => 1.5,
+                'text-embedding-ada-002' => 0.10,
+                'dall-e-3' => 40.0, // Per 1000 images approx, treated as tokens here is hard
+            ],
+            'azure_openai' => [
+                'gpt-4o' => 5.0,
+                'gpt-35-turbo' => 0.5,
             ],
             'anthropic' => [
-                'claude-3-5-sonnet-20241022' => 3.0,
-                'claude-3-opus-20240229' => 15.0,
-                'claude-3-sonnet-20240229' => 3.0,
-                'claude-3-haiku-20240307' => 0.25,
+                'claude-3-5-sonnet' => 3.0,
+                'claude-3-opus' => 15.0,
+                'claude-3-sonnet' => 3.0,
+                'claude-3-haiku' => 0.25,
             ],
             'google' => [
-                'gemini-1.5-pro' => 1.25,
+                'gemini-1.5-pro' => 3.5,
                 'gemini-1.5-flash' => 0.075,
                 'gemini-pro' => 0.5,
                 'gemini-pro-vision' => 0.5,
             ],
-            'deepseek' => ['deepseek-chat' => 0.14, 'deepseek-coder' => 0.14],
-            'xai' => ['grok-beta' => 0.5, 'grok-2' => 0.5, 'grok-vision-beta' => 0.5],
+            'deepseek' => [
+                'deepseek-chat' => 0.14,
+                'deepseek-coder' => 0.14
+            ],
+            'xai' => [
+                'grok-beta' => 5.0,
+                'grok-vision-beta' => 5.0
+            ],
+            'ucontents' => [
+                'mistral-7b-instruct' => 0.0,
+                'moondream2' => 0.0
+            ], // Self-hosted
         ];
 
         $model = $response['model'] ?? '';
         $tokens = $response['total_tokens'] ?? 0;
 
-        $costPerMillion = $pricing[$providerSlug][$model] ?? null;
+        $providerPricing = $pricing[$providerSlug] ?? [];
+        $costPerMillion = $providerPricing[$model] ?? null;
+
+        // Try fuzzy matching if exact match not found (e.g. gpt-4-0613 -> gpt-4)
+        if ($costPerMillion === null) {
+            foreach ($providerPricing as $key => $price) {
+                if (str_starts_with($model, $key)) {
+                    $costPerMillion = $price;
+                    break;
+                }
+            }
+        }
 
         if ($costPerMillion === null) {
             return null;

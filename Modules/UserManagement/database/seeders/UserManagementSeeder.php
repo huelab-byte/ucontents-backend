@@ -227,6 +227,7 @@ class UserManagementSeeder extends Seeder
                     'edit_own_profile',
                     'call_ai_models',
                     'use_prompt_templates',
+                    'use_ai_chat',
                     // Library & Overlay – browse shared (read-only)
                     'use_audio_library',
                     'use_image_library',
@@ -250,34 +251,28 @@ class UserManagementSeeder extends Seeder
             $permissions = $roleData['permissions'];
             unset($roleData['permissions']);
 
-            // Check if role exists by slug OR name (including soft-deleted) to avoid unique constraint violations
-            $role = Role::withTrashed()
-                ->where('slug', $roleData['slug'])
-                ->orWhere('name', $roleData['name'])
-                ->first();
-
-            if (!$role) {
-                $role = Role::create($roleData);
-            } else {
-                // Restore if soft-deleted
-                if ($role->trashed()) {
-                    $role->restore();
-                }
-                // Update existing role with new data (except slug to preserve existing relationships)
-                $role->update([
+            // Create or update role
+            $role = Role::withTrashed()->updateOrCreate(
+                ['slug' => $roleData['slug']],
+                [
+                    'name' => $roleData['name'],
                     'description' => $roleData['description'],
                     'hierarchy' => $roleData['hierarchy'],
                     'is_system' => $roleData['is_system'],
-                ]);
+                ]
+            );
+
+            if ($role->trashed()) {
+                $role->restore();
             }
 
             // Assign permissions
             if (!empty($permissions)) {
                 $permissionIds = Permission::whereIn('slug', $permissions)->pluck('id')->toArray();
-                $role->permissions()->sync($permissionIds);
+                $role->permissions()->syncWithoutDetaching($permissionIds);
             } elseif ($roleData['slug'] === 'super_admin') {
                 // Super admin gets all permissions
-                $role->permissions()->sync(Permission::pluck('id')->toArray());
+                $role->permissions()->syncWithoutDetaching(Permission::pluck('id')->toArray());
             }
         }
 
@@ -350,24 +345,21 @@ class UserManagementSeeder extends Seeder
             $roles = $userData['roles'];
             unset($userData['roles']);
 
-            // Check if user exists to avoid unique constraint violations
-            $user = User::where('email', $userData['email'])->first();
-
-            if (!$user) {
-                $user = User::create([
+            // Create user if not exists
+            $user = User::firstOrCreate(
+                ['email' => $userData['email']],
+                [
                     'name' => $userData['name'],
-                    'email' => $userData['email'],
                     'password' => Hash::make($userData['password']),
                     'status' => $userData['status'],
                     'is_system' => $userData['is_system'],
                     'email_verified_at' => $userData['email_verified_at'],
-                ]);
-            }
-            // Don't update existing users to preserve their data
+                ]
+            );
 
             // Assign roles
             $roleIds = Role::whereIn('slug', $roles)->pluck('id')->toArray();
-            $user->roles()->sync($roleIds);
+            $user->roles()->syncWithoutDetaching($roleIds);
         }
 
         $this->command->info('Demo users seeded successfully.');
@@ -451,7 +443,8 @@ class UserManagementSeeder extends Seeder
         // AI Integration
         if (in_array($slug, [
             'manage_ai_providers', 'manage_ai_api_keys', 'view_ai_usage',
-            'manage_prompt_templates', 'call_ai_models', 'use_prompt_templates'
+            'manage_prompt_templates', 'call_ai_models', 'use_prompt_templates',
+            'use_ai_chat'
         ])) {
             return 'AI Integration';
         }

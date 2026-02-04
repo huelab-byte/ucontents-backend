@@ -33,6 +33,8 @@ class AiApiKeyResource extends JsonResource
             'priority' => $this->priority,
             'rate_limit_per_minute' => $this->rate_limit_per_minute,
             'rate_limit_per_day' => $this->rate_limit_per_day,
+            'scopes' => $this->scopes ?? [],
+            'scope_names' => $this->getScopeNames(),
             'last_used_at' => $this->last_used_at?->toISOString(),
             'total_requests' => $this->total_requests,
             'total_tokens' => $this->total_tokens,

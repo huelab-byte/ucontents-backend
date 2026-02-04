@@ -119,6 +119,7 @@ class StoreEmbeddingAction
             prompt: $text,
             module: 'FootageLibrary',
             feature: 'embedding_generation',
+            scope: 'embedding',
         );
 
         $response = $this->aiService->callModel($dto, $userId);

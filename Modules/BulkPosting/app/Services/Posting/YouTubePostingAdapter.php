@@ -64,7 +64,7 @@ class YouTubePostingAdapter implements PostingAdapterInterface
      */
     protected function uploadVideo(SocialConnectionChannel $channel, string $accessToken, string $videoUrl, array $payload, array $curlOpts): PostResult
     {
-        $title = $payload['caption'] ?? 'Untitled Video';
+        $title = !empty($payload['youtube_heading']) ? $payload['youtube_heading'] : ($payload['caption'] ?? 'Untitled Video');
         $description = $this->buildDescription($payload);
         $tags = $this->extractTags($payload);
 
@@ -100,6 +100,11 @@ class YouTubePostingAdapter implements PostingAdapterInterface
      */
     protected function downloadVideo(string $url, array $curlOpts): ?string
     {
+        // Support local file paths for desktop app usage
+        if (file_exists($url) && is_readable($url)) {
+            return file_get_contents($url) ?: null;
+        }
+
         try {
             $request = Http::timeout(300); // 5 minutes for large videos
 
@@ -316,8 +321,14 @@ class YouTubePostingAdapter implements PostingAdapterInterface
     protected function isVideoUrl(string $url): bool
     {
         $videoExtensions = ['mp4', 'mov', 'avi', 'wmv', 'flv', 'webm', 'mkv', 'm4v', '3gp'];
-        $path = parse_url($url, PHP_URL_PATH) ?? '';
-        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        if (!filter_var($url, FILTER_VALIDATE_URL) && file_exists($url)) {
+            $path = $url;
+        } else {
+            $path = parse_url($url, PHP_URL_PATH) ?? '';
+        }
+
+        $extension = strtolower(pathinfo((string) $path, PATHINFO_EXTENSION));
 
         return in_array($extension, $videoExtensions, true);
     }

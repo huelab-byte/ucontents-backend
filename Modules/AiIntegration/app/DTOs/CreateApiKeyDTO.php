@@ -22,6 +22,8 @@ readonly class CreateApiKeyDTO
         public ?int $rateLimitPerMinute = null,
         public ?int $rateLimitPerDay = null,
         public ?array $metadata = null,
+        public ?array $scopes = null,
+        public ?int $userId = null,
     ) {
     }
 
@@ -40,6 +42,8 @@ readonly class CreateApiKeyDTO
             rateLimitPerMinute: $data['rate_limit_per_minute'] ?? null,
             rateLimitPerDay: $data['rate_limit_per_day'] ?? null,
             metadata: $data['metadata'] ?? null,
+            scopes: $data['scopes'] ?? null,
+            userId: $data['user_id'] ?? null,
         );
     }
 }

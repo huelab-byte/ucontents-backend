@@ -65,6 +65,7 @@ class GenerateMetadataFromFramesAction
                         'image' => $base64Image,
                         'image_format' => 'base64',
                     ],
+                    scope: 'vision_metadata',
                 );
 
                 $response = $this->aiService->callModel($dto, $userId);

@@ -60,6 +60,7 @@ return [
         ],
         'customer' => [
             'ai-call' => ['enabled' => true],
+            'ai-chat' => ['enabled' => true],
             'prompt-templates' => ['enabled' => true],
         ],
     ],
@@ -82,6 +83,80 @@ return [
         'customer' => [
             'call_ai_models',
             'use_prompt_templates',
+            'use_ai_chat',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | API Key Scopes
+    |--------------------------------------------------------------------------
+    |
+    | Define scopes that can be assigned to API keys. This allows administrators
+    | to configure which API keys are used for specific AI tasks.
+    |
+    | Example: API key 1 can be used for vision tasks (read_image, vision_content)
+    |          API key 2 can be used for text tasks (text_content, text_metadata)
+    |
+    | If an API key has no scopes assigned, it can be used for any task.
+    |
+    */
+    'scopes' => [
+        // Vision/Image related scopes
+        'vision_content' => [
+            'name' => 'Vision Content Generation',
+            'description' => 'Generate social media content from video frames/images',
+            'module' => 'MediaUpload',
+            'requires_vision' => true,
+        ],
+        'vision_caption' => [
+            'name' => 'Vision Caption Generation',
+            'description' => 'Generate in-video captions from video frames',
+            'module' => 'MediaUpload',
+            'requires_vision' => true,
+        ],
+        'vision_metadata' => [
+            'name' => 'Vision Metadata Generation',
+            'description' => 'Generate footage metadata from video frames',
+            'module' => 'FootageLibrary',
+            'requires_vision' => true,
+        ],
+
+        // Text-based scopes
+        'text_content' => [
+            'name' => 'Text Content Generation',
+            'description' => 'Generate social media content from title/prompt (no images)',
+            'module' => 'MediaUpload',
+            'requires_vision' => false,
+        ],
+        'text_caption' => [
+            'name' => 'Text Caption Generation',
+            'description' => 'Generate in-video captions from text context',
+            'module' => 'MediaUpload',
+            'requires_vision' => false,
+        ],
+        'text_metadata' => [
+            'name' => 'Text Metadata Generation',
+            'description' => 'Generate footage metadata from title (no images)',
+            'module' => 'FootageLibrary',
+            'requires_vision' => false,
+        ],
+
+        // Embedding/Vector scopes
+        'embedding' => [
+            'name' => 'Embedding Generation',
+            'description' => 'Generate text embeddings for vector search',
+            'module' => 'FootageLibrary',
+            'requires_vision' => false,
+            'requires_embedding_model' => true,
+        ],
+
+        // General/Fallback scopes
+        'general' => [
+            'name' => 'General AI Tasks',
+            'description' => 'General purpose AI calls not covered by specific scopes',
+            'module' => null,
+            'requires_vision' => false,
         ],
     ],
 
@@ -130,6 +205,12 @@ return [
             'models' => ['grok-beta', 'grok-2', 'grok-vision-beta'],
             'vision_models' => ['grok-vision-beta'],
             'base_url' => 'https://api.x.ai/v1',
+        ],
+        'ucontents' => [
+            'name' => 'Ucontents AI (Self-Hosted)',
+            'models' => ['mistral-7b-instruct', 'moondream2'],
+            'vision_models' => ['moondream2'],
+            'base_url' => 'https://gpt.ucontents.com',
         ],
     ],
 ];

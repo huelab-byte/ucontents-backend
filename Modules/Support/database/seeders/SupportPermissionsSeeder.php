@@ -80,7 +80,7 @@ class SupportPermissionsSeeder extends Seeder
         if ($superAdmin) {
             // Get all permissions and sync
             $allPermissionIds = Permission::pluck('id')->toArray();
-            $superAdmin->permissions()->sync($allPermissionIds);
+            $superAdmin->permissions()->syncWithoutDetaching($allPermissionIds);
             $this->command->info('All permissions assigned to Super Admin role.');
         }
 
@@ -90,7 +90,7 @@ class SupportPermissionsSeeder extends Seeder
             // Merge existing permissions with new support permissions
             $existingPermissionIds = $admin->permissions()->pluck('permissions.id')->toArray();
             $newPermissionIds = array_unique(array_merge($existingPermissionIds, $adminPermissions));
-            $admin->permissions()->sync($newPermissionIds);
+            $admin->permissions()->syncWithoutDetaching($newPermissionIds);
             $this->command->info('Support permissions assigned to Admin role.');
         }
 
@@ -100,7 +100,7 @@ class SupportPermissionsSeeder extends Seeder
             // Merge existing permissions with new support permissions
             $existingPermissionIds = $customer->permissions()->pluck('permissions.id')->toArray();
             $newPermissionIds = array_unique(array_merge($existingPermissionIds, $customerPermissions));
-            $customer->permissions()->sync($newPermissionIds);
+            $customer->permissions()->syncWithoutDetaching($newPermissionIds);
             $this->command->info('Support permissions assigned to Customer role.');
         }
     }

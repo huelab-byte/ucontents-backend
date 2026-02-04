@@ -463,8 +463,14 @@ class MetaPostingAdapter implements PostingAdapterInterface
     protected function isVideoUrl(string $url): bool
     {
         $videoExtensions = ['mp4', 'mov', 'avi', 'wmv', 'flv', 'webm', 'mkv', 'm4v'];
-        $path = parse_url($url, PHP_URL_PATH) ?? '';
-        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        if (!filter_var($url, FILTER_VALIDATE_URL) && file_exists($url)) {
+            $path = $url;
+        } else {
+            $path = parse_url($url, PHP_URL_PATH) ?? '';
+        }
+
+        $extension = strtolower(pathinfo((string) $path, PATHINFO_EXTENSION));
 
         return in_array($extension, $videoExtensions, true);
     }
@@ -474,6 +480,11 @@ class MetaPostingAdapter implements PostingAdapterInterface
      */
     protected function isLocalUrl(string $url): bool
     {
+        // Check if valid local file first
+        if (file_exists($url)) {
+            return true;
+        }
+
         $host = parse_url($url, PHP_URL_HOST) ?? '';
         $localHosts = ['localhost', '127.0.0.1', '0.0.0.0', '::1'];
 
@@ -535,6 +546,10 @@ class MetaPostingAdapter implements PostingAdapterInterface
      */
     protected function urlToLocalPath(string $url): ?string
     {
+        if (file_exists($url)) {
+            return $url;
+        }
+
         $path = parse_url($url, PHP_URL_PATH);
         if ($path === null) {
             return null;

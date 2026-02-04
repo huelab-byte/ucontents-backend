@@ -22,6 +22,7 @@ class AiApiKey extends Model
 
     protected $fillable = [
         'provider_id',
+        'user_id',
         'name',
         'api_key',
         'api_secret',
@@ -33,6 +34,7 @@ class AiApiKey extends Model
         'rate_limit_per_minute',
         'rate_limit_per_day',
         'metadata',
+        'scopes',
         'last_used_at',
         'total_requests',
         'total_tokens',
@@ -46,10 +48,55 @@ class AiApiKey extends Model
             'rate_limit_per_minute' => 'integer',
             'rate_limit_per_day' => 'integer',
             'metadata' => 'array',
+            'scopes' => 'array',
             'last_used_at' => 'datetime',
             'total_requests' => 'integer',
             'total_tokens' => 'integer',
         ];
+    }
+
+    /**
+     * Check if this API key supports a specific scope.
+     * If no scopes are defined, the key is considered universal (supports all scopes).
+     *
+     * @param string|null $scope The scope to check, or null for general use
+     * @return bool
+     */
+    public function supportsScope(?string $scope): bool
+    {
+        // If no scopes defined, the key can be used for any scope
+        if (empty($this->scopes)) {
+            return true;
+        }
+
+        // If no specific scope requested, any scoped key can handle it
+        if ($scope === null || $scope === 'general') {
+            return true;
+        }
+
+        // Check if the requested scope is in the key's scope list
+        return in_array($scope, $this->scopes, true);
+    }
+
+    /**
+     * Get the list of scope names for this API key.
+     *
+     * @return array
+     */
+    public function getScopeNames(): array
+    {
+        if (empty($this->scopes)) {
+            return ['All scopes'];
+        }
+
+        $scopeConfig = config('aiintegration.module.scopes', []);
+        $names = [];
+
+        foreach ($this->scopes as $scope) {
+            $names[] = $scopeConfig[$scope]['name'] ?? ucfirst($scope);
+        }
+
+        return $names;
     }
 
     /**
@@ -58,6 +105,14 @@ class AiApiKey extends Model
     public function provider(): BelongsTo
     {
         return $this->belongsTo(AiProvider::class, 'provider_id');
+    }
+
+    /**
+     * Get the user that owns this API key (if any)
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\UserManagement\Models\User::class, 'user_id');
     }
 
     /**

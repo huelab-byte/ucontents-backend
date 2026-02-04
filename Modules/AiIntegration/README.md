@@ -17,15 +17,37 @@ This module provides centralized AI integration functionality for the applicatio
 
 ### 2. API Key Management
 - Multiple API keys per provider
+- **Scope-based API key selection** - Assign specific AI tasks to specific API keys
 - Enable/disable API keys
 - Priority-based key selection
 - Rate limiting per API key
 - Encrypted storage of API keys
 - Usage tracking per key
 
-### 3. AI Model Calling
+### 3. Scope-Based API Key Configuration
+
+You can configure which API keys are used for specific AI tasks by assigning scopes:
+
+| Scope | Description | Module |
+|-------|-------------|--------|
+| `vision_content` | Generate content from video frames/images | MediaUpload |
+| `vision_caption` | Generate in-video captions from frames | MediaUpload |
+| `vision_metadata` | Generate footage metadata from frames | FootageLibrary |
+| `text_content` | Generate content from title/prompt | MediaUpload |
+| `text_caption` | Generate in-video captions from text | MediaUpload |
+| `text_metadata` | Generate footage metadata from title | FootageLibrary |
+| `embedding` | Generate text embeddings for vector search | FootageLibrary |
+| `general` | General purpose AI calls | All |
+
+**Example:** You have 2 API keys:
+- API Key 1 (scopes: `vision_content`, `vision_metadata`) - Used for image analysis tasks
+- API Key 2 (scopes: `text_content`, `text_metadata`, `embedding`) - Used for text generation
+
+If an API key has no scopes assigned, it can be used for any task (backward compatible).
+
+### 4. AI Model Calling
 - Centralized AI model calling service
-- Automatic API key selection (best available or random)
+- **Automatic scope-based API key selection**
 - Support for custom API key selection
 - Model settings (temperature, max_tokens, etc.)
 - Usage logging and cost tracking
@@ -64,9 +86,10 @@ This module provides centralized AI integration functionality for the applicatio
 
 #### API Keys
 - `GET /api/v1/admin/ai-api-keys` - List all API keys
-- `POST /api/v1/admin/ai-api-keys` - Create new API key
+- `GET /api/v1/admin/ai-api-keys/scopes` - **Get available scopes for configuration**
+- `POST /api/v1/admin/ai-api-keys` - Create new API key (supports `scopes` field)
 - `GET /api/v1/admin/ai-api-keys/{id}` - Get API key details
-- `PUT/PATCH /api/v1/admin/ai-api-keys/{id}` - Update API key
+- `PUT/PATCH /api/v1/admin/ai-api-keys/{id}` - Update API key (supports `scopes` field)
 - `DELETE /api/v1/admin/ai-api-keys/{id}` - Delete API key
 - `POST /api/v1/admin/ai-api-keys/{id}/enable` - Enable API key
 - `POST /api/v1/admin/ai-api-keys/{id}/disable` - Disable API key

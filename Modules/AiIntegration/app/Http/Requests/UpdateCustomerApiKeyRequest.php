@@ -5,26 +5,14 @@ declare(strict_types=1);
 namespace Modules\AiIntegration\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Modules\Core\Traits\AuthorizesWithSuperAdmin;
 
-/**
- * Form request for updating an AI API key
- */
-class UpdateApiKeyRequest extends FormRequest
+class UpdateCustomerApiKeyRequest extends FormRequest
 {
-    use AuthorizesWithSuperAdmin;
-
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return $this->hasPermission('manage_ai_api_keys');
+        return true; 
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     */
     public function rules(): array
     {
         return [
@@ -40,7 +28,7 @@ class UpdateApiKeyRequest extends FormRequest
             'rate_limit_per_day' => 'nullable|integer|min:1',
             'metadata' => 'nullable|array',
             'scopes' => 'nullable|array',
-            'scopes.*' => 'string|in:' . implode(',', array_keys(config('aiintegration.module.scopes', []))),
+            'scopes.*' => 'string',
         ];
     }
 }

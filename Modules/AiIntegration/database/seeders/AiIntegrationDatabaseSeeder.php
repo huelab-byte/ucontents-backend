@@ -11,6 +11,9 @@ class AiIntegrationDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call([
+            AiProviderSeeder::class,
+            AiIntegrationPermissionsSeeder::class,
+        ]);
     }
 }

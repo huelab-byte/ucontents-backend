@@ -41,6 +41,8 @@ class StoreApiKeyRequest extends FormRequest
             'rate_limit_per_minute' => 'nullable|integer|min:1',
             'rate_limit_per_day' => 'nullable|integer|min:1',
             'metadata' => 'nullable|array',
+            'scopes' => 'nullable|array',
+            'scopes.*' => 'string|in:' . implode(',', array_keys(config('aiintegration.module.scopes', []))),
         ];
     }
 }

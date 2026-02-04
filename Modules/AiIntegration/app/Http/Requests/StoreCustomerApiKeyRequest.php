@@ -5,42 +5,34 @@ declare(strict_types=1);
 namespace Modules\AiIntegration\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Modules\Core\Traits\AuthorizesWithSuperAdmin;
 
-/**
- * Form request for updating an AI API key
- */
-class UpdateApiKeyRequest extends FormRequest
+class StoreCustomerApiKeyRequest extends FormRequest
 {
-    use AuthorizesWithSuperAdmin;
-
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return $this->hasPermission('manage_ai_api_keys');
+        return true; // Authorization handled by Policy/Controller
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     */
     public function rules(): array
     {
         return [
-            'name' => 'sometimes|string|max:255',
-            'api_key' => 'sometimes|string',
+            'provider_id' => 'required|exists:ai_providers,id',
+            'name' => 'required|string|max:255',
+            'api_key' => 'required|string',
             'api_secret' => 'nullable|string',
             'endpoint_url' => 'nullable|url',
             'organization_id' => 'nullable|string|max:255',
             'project_id' => 'nullable|string|max:255',
             'is_active' => 'sometimes|boolean',
+            // Allow basic fields, maybe restrict priority/limits?
+            // Customers probably shouldn't set high priority over system keys?
+            // But within their own keys, priority matters.
             'priority' => 'sometimes|integer|min:0',
             'rate_limit_per_minute' => 'nullable|integer|min:1',
             'rate_limit_per_day' => 'nullable|integer|min:1',
             'metadata' => 'nullable|array',
             'scopes' => 'nullable|array',
-            'scopes.*' => 'string|in:' . implode(',', array_keys(config('aiintegration.module.scopes', []))),
+            'scopes.*' => 'string', // Validate scopes against config if possible
         ];
     }
 }

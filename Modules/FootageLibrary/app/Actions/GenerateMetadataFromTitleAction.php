@@ -37,6 +37,7 @@ class GenerateMetadataFromTitleAction
                 ],
                 module: 'FootageLibrary',
                 feature: 'metadata_generation',
+                scope: 'text_metadata',
             );
 
             $response = $this->aiService->callModel($dto, $userId);

@@ -92,6 +92,13 @@ return [
             ['provider' => 'openai', 'model' => 'gpt-4-turbo'],
             ['provider' => 'anthropic', 'model' => 'claude-3-5-sonnet-20241022'],
             ['provider' => 'google', 'model' => 'gemini-1.5-flash'],
+            ['provider' => 'ucontents', 'model' => 'moondream2'], // Self-hosted vision
+        ],
+        'text_fallbacks' => [
+            ['provider' => 'openai', 'model' => 'gpt-4o'],
+            ['provider' => 'openai', 'model' => 'gpt-4o-mini'],
+            ['provider' => 'anthropic', 'model' => 'claude-3-5-sonnet-20241022'],
+            ['provider' => 'ucontents', 'model' => 'mistral-7b-instruct'], // Self-hosted text
         ],
     ],
     

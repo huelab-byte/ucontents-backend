@@ -21,6 +21,7 @@ readonly class UpdateApiKeyDTO
         public ?int $rateLimitPerMinute = null,
         public ?int $rateLimitPerDay = null,
         public ?array $metadata = null,
+        public ?array $scopes = null,
     ) {
     }
 
@@ -38,6 +39,7 @@ readonly class UpdateApiKeyDTO
             rateLimitPerMinute: $data['rate_limit_per_minute'] ?? null,
             rateLimitPerDay: $data['rate_limit_per_day'] ?? null,
             metadata: $data['metadata'] ?? null,
+            scopes: array_key_exists('scopes', $data) ? $data['scopes'] : null,
         );
     }
 }

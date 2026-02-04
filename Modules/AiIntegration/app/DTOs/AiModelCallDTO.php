@@ -18,6 +18,7 @@ readonly class AiModelCallDTO
         public ?string $module = null,
         public ?string $feature = null,
         public ?array $metadata = null,
+        public ?string $scope = null,
     ) {
     }
 
@@ -32,6 +33,8 @@ readonly class AiModelCallDTO
             module: $data['module'] ?? null,
             feature: $data['feature'] ?? null,
             metadata: $data['metadata'] ?? null,
+            scope: $data['scope'] ?? null,
         );
     }
 }
+

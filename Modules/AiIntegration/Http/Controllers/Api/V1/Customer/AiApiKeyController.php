@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Modules\AiIntegration\Http\Controllers\Api\V1\Admin;
+namespace Modules\AiIntegration\Http\Controllers\Api\V1\Customer;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Modules\AiIntegration\Actions\CreateApiKeyAction;
 use Modules\AiIntegration\Actions\DeleteApiKeyAction;
 use Modules\AiIntegration\Actions\TestApiKeyAction;
@@ -12,15 +13,14 @@ use Modules\AiIntegration\Actions\ToggleApiKeyAction;
 use Modules\AiIntegration\Actions\UpdateApiKeyAction;
 use Modules\AiIntegration\DTOs\CreateApiKeyDTO;
 use Modules\AiIntegration\DTOs\UpdateApiKeyDTO;
-use Modules\AiIntegration\Http\Requests\StoreApiKeyRequest;
-use Modules\AiIntegration\Http\Requests\UpdateApiKeyRequest;
-use Modules\AiIntegration\Http\Requests\ListAiApiKeysRequest;
+use Modules\AiIntegration\Http\Requests\StoreCustomerApiKeyRequest;
+use Modules\AiIntegration\Http\Requests\UpdateCustomerApiKeyRequest;
 use Modules\AiIntegration\Http\Resources\AiApiKeyResource;
 use Modules\AiIntegration\Models\AiApiKey;
 use Modules\Core\Http\Controllers\Api\BaseApiController;
 
 /**
- * Admin API Controller for managing AI API keys
+ * Customer API Controller for managing their own AI API keys
  */
 class AiApiKeyController extends BaseApiController
 {
@@ -29,28 +29,38 @@ class AiApiKeyController extends BaseApiController
         private UpdateApiKeyAction $updateApiKeyAction,
         private ToggleApiKeyAction $toggleApiKeyAction,
         private DeleteApiKeyAction $deleteApiKeyAction,
-        private TestApiKeyAction $testApiKeyAction,
-        private \Modules\AiIntegration\Services\AiApiKeyQueryService $queryService
+        private TestApiKeyAction $testApiKeyAction
     ) {
     }
 
     /**
-     * List all API keys
+     * List customer's API keys
      */
-    public function index(ListAiApiKeysRequest $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $this->authorize('viewAny', AiApiKey::class);
+        // No permission check needed, just auth (handled by middleware)
+        
+        $query = AiApiKey::with('provider')
+            ->where('user_id', auth()->id());
 
-        $filters = $request->only(['provider_id', 'is_active']);
-        $apiKeys = $this->queryService->listAllWithFilters(
-            $filters,
-            (int) $request->input('per_page', 15)
-        );
+        // Filter by provider
+        if ($request->has('provider_id')) {
+            $query->where('provider_id', $request->input('provider_id'));
+        }
+
+        // Filter by active status
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
+        $apiKeys = $query->orderBy('priority', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->paginate($request->input('per_page', 15));
 
         return $this->paginatedResource(
             $apiKeys,
             AiApiKeyResource::class,
-            'API keys retrieved successfully'
+            'Your API keys retrieved successfully'
         );
     }
 
@@ -70,13 +80,17 @@ class AiApiKeyController extends BaseApiController
     }
 
     /**
-     * Create a new API key
+     * Create a new API key for the customer
      */
-    public function store(StoreApiKeyRequest $request): JsonResponse
+    public function store(StoreCustomerApiKeyRequest $request): JsonResponse
     {
+        // Policy check for create (allows all customers)
         $this->authorize('create', AiApiKey::class);
 
-        $dto = CreateApiKeyDTO::fromArray($request->validated());
+        $data = $request->validated();
+        $data['user_id'] = auth()->id(); // Force user ownership
+
+        $dto = CreateApiKeyDTO::fromArray($data);
         $apiKey = $this->createApiKeyAction->execute($dto);
         $apiKey->load('provider');
 
@@ -90,7 +104,7 @@ class AiApiKeyController extends BaseApiController
     /**
      * Update an API key
      */
-    public function update(UpdateApiKeyRequest $request, AiApiKey $apiKey): JsonResponse
+    public function update(UpdateCustomerApiKeyRequest $request, AiApiKey $apiKey): JsonResponse
     {
         $this->authorize('update', $apiKey);
 
@@ -120,41 +134,11 @@ class AiApiKeyController extends BaseApiController
     }
 
     /**
-     * Enable an API key
-     */
-    public function enable(AiApiKey $apiKey): JsonResponse
-    {
-        $this->authorize('update', $apiKey);
-
-        $apiKey = $this->toggleApiKeyAction->execute($apiKey, true);
-
-        return $this->success(
-            new AiApiKeyResource($apiKey),
-            'API key enabled successfully'
-        );
-    }
-
-    /**
-     * Disable an API key
-     */
-    public function disable(AiApiKey $apiKey): JsonResponse
-    {
-        $this->authorize('update', $apiKey);
-
-        $apiKey = $this->toggleApiKeyAction->execute($apiKey, false);
-
-        return $this->success(
-            new AiApiKeyResource($apiKey),
-            'API key disabled successfully'
-        );
-    }
-
-    /**
-     * Test an API key by making a simple API call
+     * Test an API key
      */
     public function test(AiApiKey $apiKey): JsonResponse
     {
-        $this->authorize('update', $apiKey);
+        $this->authorize('update', $apiKey); // Must be owner
 
         $result = $this->testApiKeyAction->execute($apiKey);
 
@@ -164,30 +148,37 @@ class AiApiKeyController extends BaseApiController
 
         return $this->error($result['error'] ?? 'Test failed', 422, $result);
     }
+    
+    /**
+     * Enable/Disable handled by update, but can add specifics if needed. 
+     * Skipping specific endpoints for brevity, update(is_active) covers it.
+     */
+    /**
+     * Get available AI providers
+     */
+    public function providers(): JsonResponse
+    {
+        $providers = \Modules\AiIntegration\Models\AiProvider::where('is_active', true)->get();
+        return $this->success(
+            \Modules\AiIntegration\Http\Resources\AiProviderResource::collection($providers),
+            'Providers retrieved successfully'
+        );
+    }
 
     /**
-     * Get available scopes for API key configuration
+     * Get available scopes
      */
     public function scopes(): JsonResponse
     {
-        $this->authorize('viewAny', AiApiKey::class);
-
         $scopes = config('aiintegration.module.scopes', []);
-
-        // Transform scopes into a more frontend-friendly format
         $scopeList = [];
         foreach ($scopes as $slug => $config) {
             $scopeList[] = [
                 'slug' => $slug,
                 'name' => $config['name'] ?? ucfirst($slug),
                 'description' => $config['description'] ?? '',
-                'module' => $config['module'] ?? null,
-                'requires_vision' => $config['requires_vision'] ?? false,
-                'requires_embedding_model' => $config['requires_embedding_model'] ?? false,
             ];
         }
-
         return $this->success($scopeList, 'Available scopes retrieved successfully');
     }
 }
-

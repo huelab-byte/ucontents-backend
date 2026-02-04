@@ -65,6 +65,7 @@ class ContentItemCreatorService
                 'caption' => $media->social_caption ?? $media->title ?? '',
                 'media_urls' => $mediaUrl ? [$mediaUrl] : [],
                 'hashtags' => is_array($media->hashtags) ? $media->hashtags : [],
+                'youtube_heading' => $media->youtube_heading,
             ];
 
             BulkPostingContentItem::create([
@@ -95,6 +96,7 @@ class ContentItemCreatorService
                 'caption' => $row['caption'] ?? $row['text'] ?? '',
                 'media_urls' => isset($row['media_url']) ? [$row['media_url']] : ($row['media_urls'] ?? []),
                 'hashtags' => is_array($row['hashtags'] ?? null) ? $row['hashtags'] : (isset($row['hashtags']) ? explode(' ', (string) $row['hashtags']) : []),
+                'youtube_heading' => $row['youtube_heading'] ?? null,
             ];
 
             BulkPostingContentItem::create([

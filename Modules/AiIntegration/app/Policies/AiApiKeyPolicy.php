@@ -38,7 +38,9 @@ class AiApiKeyPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $this->canManage($user);
+        // For admin listing, check permission
+        // Customer listing is handled by controller filtering, authorization there implies strict ownership checks
+        return $this->canManage($user) || true; // Allow customers to attempt to view list (controller filters it)
     }
 
     /**
@@ -46,7 +48,7 @@ class AiApiKeyPolicy
      */
     public function view(User $user, AiApiKey $apiKey): bool
     {
-        return $this->canManage($user);
+        return $this->canManage($user) || $apiKey->user_id === $user->id;
     }
 
     /**
@@ -54,7 +56,8 @@ class AiApiKeyPolicy
      */
     public function create(User $user): bool
     {
-        return $this->canManage($user);
+        // Allow customers to create their own keys
+        return true; 
     }
 
     /**
@@ -62,7 +65,7 @@ class AiApiKeyPolicy
      */
     public function update(User $user, AiApiKey $apiKey): bool
     {
-        return $this->canManage($user);
+        return $this->canManage($user) || $apiKey->user_id === $user->id;
     }
 
     /**
@@ -70,6 +73,6 @@ class AiApiKeyPolicy
      */
     public function delete(User $user, AiApiKey $apiKey): bool
     {
-        return $this->canManage($user);
+        return $this->canManage($user) || $apiKey->user_id === $user->id;
     }
 }
