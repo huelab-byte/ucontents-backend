@@ -42,7 +42,7 @@ class GenerateContentFromFramesAction
                 $providerSlug = $attempt['provider'];
                 $model = $attempt['model'];
 
-                $apiKey = $this->apiKeyService->getBestApiKey($providerSlug);
+                $apiKey = $this->apiKeyService->getBestApiKeyForScope($providerSlug, 'vision_content');
                 
                 if (!$apiKey) {
                     continue; // No key for this provider, try next

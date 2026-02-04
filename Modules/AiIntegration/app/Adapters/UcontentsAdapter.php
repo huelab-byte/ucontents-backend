@@ -137,55 +137,31 @@ class UcontentsAdapter implements ProviderAdapterInterface
         }
 
         try {
-            // Prepare the multipart request
-            $multipart = [
-                [
-                    'name' => 'prompt',
-                    'contents' => $dto->prompt,
-                ],
-            ];
+            $request = Http::withHeaders([
+                'X-API-Key' => $apiKey,
+            ])->timeout(180);
 
             // Handle image based on format
             if ($imageFormat === 'base64') {
-                // Convert base64 to binary for upload
                 $imageData = base64_decode($image);
-                $multipart[] = [
-                    'name' => 'file',
-                    'contents' => $imageData,
-                    'filename' => 'image.jpg',
-                    'headers' => ['Content-Type' => 'image/jpeg'],
-                ];
+                $request->attach('file', $imageData, 'image.jpg', ['Content-Type' => 'image/jpeg']);
             } elseif ($imageFormat === 'url') {
-                // Download the image first
                 $imageResponse = Http::get($image);
                 if ($imageResponse->successful()) {
-                    $multipart[] = [
-                        'name' => 'file',
-                        'contents' => $imageResponse->body(),
-                        'filename' => 'image.jpg',
-                        'headers' => ['Content-Type' => 'image/jpeg'],
-                    ];
+                    $request->attach('file', $imageResponse->body(), 'image.jpg', ['Content-Type' => 'image/jpeg']);
                 } else {
                     throw new \Exception('Failed to download image from URL');
                 }
             } elseif ($imageFormat === 'path') {
-                // Read from file path
                 if (!file_exists($image)) {
                     throw new \Exception("Image file not found: {$image}");
                 }
-                $multipart[] = [
-                    'name' => 'file',
-                    'contents' => fopen($image, 'r'),
-                    'filename' => basename($image),
-                ];
+                $request->attach('file', fopen($image, 'r'), basename($image));
             }
 
-            $response = Http::withHeaders([
-                'X-API-Key' => $apiKey,
-            ])
-            ->timeout(180)
-            ->asMultipart()
-            ->post("{$baseUrl}/analyze", $multipart);
+            $response = $request->post("{$baseUrl}/analyze", [
+                'prompt' => $dto->prompt,
+            ]);
 
             if (!$response->successful()) {
                 $errorBody = $response->body();

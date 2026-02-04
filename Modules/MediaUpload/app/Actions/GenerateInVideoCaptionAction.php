@@ -30,7 +30,7 @@ class GenerateInVideoCaptionAction
         $model = $cfg['text_model'] ?? 'gpt-4o';
         $prompt = $this->buildTextPrompt($context, $wordsPerCaption);
 
-        $apiKey = $this->apiKeyService->getBestApiKey($provider);
+        $apiKey = $this->apiKeyService->getBestApiKeyForScope($provider, 'text_caption');
         if (!$apiKey) {
             throw new \RuntimeException('No AI API key available for in-video caption generation');
         }
@@ -60,7 +60,7 @@ class GenerateInVideoCaptionAction
         $prompt = $this->buildVisionPrompt($title, $wordsPerCaption);
         $image = base64_encode(file_get_contents($mergedFramePath));
 
-        $apiKey = $this->apiKeyService->getBestApiKey($provider);
+        $apiKey = $this->apiKeyService->getBestApiKeyForScope($provider, 'vision_caption');
         if (!$apiKey) {
             throw new \RuntimeException('No AI API key available for in-video caption generation');
         }
