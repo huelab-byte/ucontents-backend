@@ -21,7 +21,12 @@ class ListAiUsageLogsAction
      */
     public function execute(AiUsageFilterDTO $dto): LengthAwarePaginator
     {
-        $query = AiUsageLog::query();
+        $query = AiUsageLog::query()
+            ->select([
+                'id', 'api_key_id', 'user_id', 'provider_slug', 'model', 
+                'prompt_tokens', 'completion_tokens', 'total_tokens', 
+                'cost', 'response_time_ms', 'status', 'created_at'
+            ]);
         
         // Use separate with() calls to prevent total failure if one relationship is broken
         $query->with(['user', 'apiKey' => function($q) {
