@@ -21,8 +21,8 @@ class AiUsageLogResource extends JsonResource
             'id' => $this->id,
             'provider_slug' => $this->provider_slug,
             'model' => $this->model,
-            'prompt' => $this->when($request->user()?->can('view_ai_usage'), $this->prompt),
-            'response' => $this->when($request->user()?->can('view_ai_usage'), $this->response),
+            'prompt' => $this->when($request->user()?->hasPermission('view_ai_usage'), $this->prompt),
+            'response' => $this->when($request->user()?->hasPermission('view_ai_usage'), $this->response),
             'prompt_tokens' => $this->prompt_tokens,
             'completion_tokens' => $this->completion_tokens,
             'total_tokens' => $this->total_tokens,
@@ -33,7 +33,9 @@ class AiUsageLogResource extends JsonResource
             'module' => $this->module,
             'feature' => $this->feature,
             'user' => $this->whenLoaded('user'),
-            'created_at' => $this->created_at?->toISOString(),
+            'created_at' => $this->created_at instanceof \DateTimeInterface 
+                ? $this->created_at->toISOString() 
+                : ($this->created_at ? (new \Carbon\Carbon($this->created_at))->toISOString() : null),
         ];
     }
 }

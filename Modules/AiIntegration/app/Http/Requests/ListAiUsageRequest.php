@@ -29,10 +29,10 @@ class ListAiUsageRequest extends FormRequest
     {
         return [
             'provider_slug' => 'sometimes|string|max:100',
-            'user_id' => 'sometimes|integer|exists:users,id',
-            'status' => 'sometimes|string|in:success,error,pending',
-            'date_from' => 'sometimes|date|date_format:Y-m-d',
-            'date_to' => 'sometimes|date|date_format:Y-m-d|after_or_equal:date_from',
+            'user_id' => 'sometimes|integer',
+            'status' => 'sometimes|string|in:success,error,rate_limited',
+            'date_from' => 'sometimes|nullable|date|date_format:Y-m-d',
+            'date_to' => 'sometimes|nullable|date|date_format:Y-m-d',
             'per_page' => 'sometimes|integer|min:1|max:100',
             'page' => 'sometimes|integer|min:1',
         ];
