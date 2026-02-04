@@ -20,12 +20,18 @@ class AiUsageFilterDTO
 
     public static function fromArray(array $data): self
     {
+        $sanitized = [];
+        foreach (['provider_slug', 'status', 'date_from', 'date_to'] as $field) {
+            $val = $data[$field] ?? null;
+            $sanitized[$field] = ($val === '' || $val === 'undefined') ? null : $val;
+        }
+
         return new self(
-            providerSlug: $data['provider_slug'] ?? null,
-            userId: isset($data['user_id']) ? (int) $data['user_id'] : null,
-            status: $data['status'] ?? null,
-            dateFrom: $data['date_from'] ?? null,
-            dateTo: $data['date_to'] ?? null,
+            providerSlug: $sanitized['provider_slug'],
+            userId: !empty($data['user_id']) ? (int) $data['user_id'] : null,
+            status: $sanitized['status'],
+            dateFrom: $sanitized['date_from'],
+            dateTo: $sanitized['date_to'],
             perPage: (int) ($data['per_page'] ?? 15),
         );
     }

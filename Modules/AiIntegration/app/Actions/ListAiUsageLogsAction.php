@@ -21,7 +21,12 @@ class ListAiUsageLogsAction
      */
     public function execute(AiUsageFilterDTO $dto): LengthAwarePaginator
     {
-        $query = AiUsageLog::with('user', 'apiKey.provider');
+        $query = AiUsageLog::query();
+        
+        // Use separate with() calls to prevent total failure if one relationship is broken
+        $query->with(['user', 'apiKey' => function($q) {
+            $q->withTrashed()->with('provider');
+        }]);
 
         // Filter by provider
         if ($dto->providerSlug) {

@@ -56,6 +56,8 @@ class AiUsageLog extends Model
             'cost' => 'decimal:6',
             'response_time_ms' => 'integer',
             'metadata' => 'array',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
     }
 
