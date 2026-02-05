@@ -12,6 +12,8 @@ class MediaUploadDatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(MediaUploadSettingsSeeder::class);
+
         $permissions = [
             'view_media_upload_folders' => 'View media upload folders',
             'manage_media_upload_folders' => 'Manage media upload folders',

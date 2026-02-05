@@ -50,6 +50,12 @@ class DatabaseSeeder extends Seeder
         // Seed CustomerManagement module (creates customer management permissions)
         $this->call(\Modules\CustomerManagement\Database\Seeders\CustomerManagementDatabaseSeeder::class);
 
+        // Seed AiIntegration module (providers, permissions)
+        $this->call(\Modules\AiIntegration\Database\Seeders\AiIntegrationDatabaseSeeder::class);
+
+        // Seed GeneralSettings module
+        $this->call(\Modules\GeneralSettings\Database\Seeders\GeneralSettingsDatabaseSeeder::class);
+
         // Assign default "browse shared library/overlay" permissions to customer role
         $this->syncCustomerLibraryPermissions();
 

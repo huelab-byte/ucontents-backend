@@ -13,17 +13,18 @@ class GenerateContentFromFramesAction
     public function __construct(
         private AiModelCallService $aiService,
         private AiApiKeyService $apiKeyService
-    ) {}
+    ) {
+    }
 
-    public function execute(string $mergedFramePath, string $title, array $opts, ?int $userId = null): array
+    public function execute(string $mergedFramePath, string $title, array $opts, ?int $userId = null, string $customPrompt = ''): array
     {
+        $primaryProvider = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.ai_provider', config('mediaupload.module.content_generation.ai_provider', 'openai'));
+        $primaryModel = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.vision_model', config('mediaupload.module.content_generation.vision_model', 'gpt-4o'));
         $cfg = config('mediaupload.module.content_generation', []);
-        $primaryProvider = $cfg['ai_provider'] ?? 'openai';
-        $primaryModel = $cfg['vision_model'] ?? 'gpt-4o';
-        
+
         // Build list of providers to try: Primary + Fallbacks
         $attempts = [['provider' => $primaryProvider, 'model' => $primaryModel]];
-        
+
         if (!empty($cfg['vision_fallbacks'])) {
             foreach ($cfg['vision_fallbacks'] as $fallback) {
                 // Avoid duplicates
@@ -33,7 +34,7 @@ class GenerateContentFromFramesAction
             }
         }
 
-        $prompt = $this->buildPrompt($title, $opts);
+        $prompt = $this->buildPrompt($title, $opts, $customPrompt);
         $image = base64_encode(file_get_contents($mergedFramePath));
         $lastException = null;
 
@@ -43,7 +44,7 @@ class GenerateContentFromFramesAction
                 $model = $attempt['model'];
 
                 $apiKey = $this->apiKeyService->getBestApiKeyForScope($providerSlug, 'vision_content');
-                
+
                 if (!$apiKey) {
                     continue; // No key for this provider, try next
                 }
@@ -61,7 +62,7 @@ class GenerateContentFromFramesAction
 
                 $res = $this->aiService->callModel($dto, $userId);
                 $text = $res['content'] ?? $res['message'] ?? '';
-                
+
                 return $this->parseResponse($text, $title, $opts);
 
             } catch (\Exception $e) {
@@ -73,34 +74,48 @@ class GenerateContentFromFramesAction
 
         // If we get here, all attempts failed
         throw new \RuntimeException(
-            'Failed to generate content. All AI providers failed. Last error: ' . 
+            'Failed to generate content. All AI providers failed. Last error: ' .
             ($lastException ? $lastException->getMessage() : 'No active API keys found.')
         );
     }
 
-    private function buildPrompt(string $title, array $opts): string
+    private function buildPrompt(string $title, array $opts, string $customPrompt = ''): string
     {
         $headingWords = max(1, (int) ($opts['heading_length'] ?? 10));
         $emoji = !empty($opts['heading_emoji']);
         $captionWords = max(1, (int) ($opts['caption_length'] ?? 30));
         $hc = max(1, (int) ($opts['hashtag_count'] ?? 3));
-        
+
         $emojiLine = $emoji
             ? 'MANDATORY: Include 1–2 relevant emojis in the heading.'
             : 'Do not use emojis in the heading.';
-        
+
+        $userInstructions = '';
+        if (!empty($customPrompt)) {
+            $userInstructions = "\nUSER CUSTOM INSTRUCTIONS:\n" . $customPrompt . "\n";
+        }
+
         return <<<PROMPT
-You are a social media content expert. The image shows 6 frames from a video merged into a grid.
+You are a social media content expert. The image shows multiple frames from a video.
 
-Analyze the visual content and create engaging content.
+Analyze the visual content and create ORIGINAL, high-quality content.
+{$userInstructions}
+CRITICAL INSTRUCTIONS:
+- IGNORE any external filenames, titles, or metadata you might think you know. 
+- Focus ONLY on the visual details present in the frames.
+- **DO NOT REUSE** words from the filename or title. Use your own creative vocabulary.
 
-CRITICAL LENGTH REQUIREMENTS - YOU MUST FOLLOW THESE EXACTLY:
-1. YouTube Heading: EXACTLY {$headingWords} words (not more, not less). {$emojiLine}
-2. Social Caption: EXACTLY {$captionWords} words (not more, not less). Include a hook and call-to-action. Do NOT include hashtags in this field.
+LENGTH REQUIREMENTS (YOU MUST FOLLOW THESE EXACTLY OR YOU FAIL):
+1. YouTube Heading: EXACTLY {$headingWords} words. {$emojiLine}
+2. Social Caption: This MUST be a LONG, DETAILED paragraph of APPROXIMATELY {$captionWords} words. 
+   - DO NOT be brief. 
+   - Expand on the atmosphere, the action, and the feelings shown.
+   - Use at least 4-5 descriptive sentences.
+   - Include a hook and call-to-action. 
+   - Do NOT include hashtags in this field.
 3. Hashtags: EXACTLY {$hc} hashtags with # symbol.
 
-Create ORIGINAL content based SOLELY on what you see in the images.
-
+FORMATTING:
 Return ONLY a valid JSON object:
 {"youtube_heading": "...", "social_caption": "...", "hashtags": ["#tag1", "#tag2", ...]}
 PROMPT;
@@ -119,14 +134,16 @@ PROMPT;
                 $t = trim((string) $t);
                 return $t !== '' && ($t[0] ?? '') !== '#' ? '#' . $t : $t;
             }, $tags), 0, $hc);
-            
-            $heading = $json['youtube_heading'] ?? 'Video: ' . $title;
+
+            $heading = $json['youtube_heading'] ?? 'Video Analysis';
             $heading = $this->ensureHeadingEmoji($heading, $opts);
-            
-            // Clean caption - Remove any hash tags that might have slipped into the caption
+
+            // Clean caption - Strictly remove any hash tags that might have slipped into the caption
             $caption = $json['social_caption'] ?? '';
-            // Remove hashtags at the end of the caption
-            $caption = preg_replace('/(\s*#\w+)+$/u', '', $caption);
+            // Remove all hashtags from the caption
+            $caption = preg_replace('/#\w+/u', '', $caption);
+            // Replace multiple spaces with a single space
+            $caption = preg_replace('/\s+/u', ' ', $caption);
             $caption = trim($caption);
 
             return [
@@ -135,7 +152,7 @@ PROMPT;
                 'hashtags' => $tags,
             ];
         }
-        $heading = $this->ensureHeadingEmoji('Video: ' . $title, $opts);
+        $heading = $this->ensureHeadingEmoji('Video Content', $opts);
         return ['youtube_heading' => $heading, 'social_caption' => '', 'hashtags' => []];
     }
 
@@ -208,7 +225,7 @@ PROMPT;
                             $candidates[] = $decoded;
                         }
                         // We reset start to look for the next object
-                        $start = -1; 
+                        $start = -1;
                     }
                 }
             }

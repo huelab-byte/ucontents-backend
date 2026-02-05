@@ -21,7 +21,8 @@ class ContentGenerationService
         private GenerateContentFromPromptAction $fromPromptAction,
         private GenerateInVideoCaptionAction $inVideoCaptionAction,
         private ExtractAndMergeFramesAction $extractFramesAction
-    ) {}
+    ) {
+    }
 
     /**
      * Generate youtube_heading, social_caption, hashtags from video/title based on folder content settings.
@@ -40,22 +41,22 @@ class ContentGenerationService
         ];
 
         return match ($settings->content_source_type) {
-            'title' => $this->fromTitleAction->execute($title, $opts, $userId),
-            'frames' => $this->generateFromFrames($videoPath, $title, $opts, $userId),
+            'title' => $this->fromTitleAction->execute($title, $opts, $userId, $settings->custom_prompt ?? ''),
+            'frames' => $this->generateFromFrames($videoPath, $title, $opts, $userId, $settings->custom_prompt ?? ''),
             'prompt' => $this->fromPromptAction->execute(
                 $settings->custom_prompt ?? 'Describe this video.',
                 $opts,
                 $userId
             ),
-            default => $this->fromTitleAction->execute($title, $opts, $userId),
+            default => $this->fromTitleAction->execute($title, $opts, $userId, $settings->custom_prompt ?? ''),
         };
     }
 
-    private function generateFromFrames(string $videoPath, string $title, array $opts, ?int $userId): array
+    private function generateFromFrames(string $videoPath, string $title, array $opts, ?int $userId, string $customPrompt = ''): array
     {
         $mergedPath = $this->extractFramesAction->execute($videoPath);
         try {
-            return $this->fromFramesAction->execute($mergedPath, $title, $opts, $userId);
+            return $this->fromFramesAction->execute($mergedPath, $title, $opts, $userId, $customPrompt);
         } finally {
             if ($mergedPath && file_exists($mergedPath)) {
                 @unlink($mergedPath);

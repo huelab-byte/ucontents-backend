@@ -17,7 +17,8 @@ class GenerateInVideoCaptionAction
     public function __construct(
         private AiModelCallService $aiService,
         private AiApiKeyService $apiKeyService
-    ) {}
+    ) {
+    }
 
     /**
      * @param array $opts words_per_caption (int), context (string)
@@ -25,9 +26,9 @@ class GenerateInVideoCaptionAction
      */
     public function executeFromText(string $context, int $wordsPerCaption, ?int $userId = null): string
     {
+        $primaryProvider = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.ai_provider', config('mediaupload.module.content_generation.ai_provider', 'openai'));
+        $primaryModel = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.text_model', config('mediaupload.module.content_generation.text_model', 'gpt-4o'));
         $cfg = config('mediaupload.module.content_generation', []);
-        $primaryProvider = $cfg['ai_provider'] ?? 'openai';
-        $primaryModel = $cfg['text_model'] ?? 'gpt-4o';
 
         // Build list of providers to try: Primary + Fallbacks
         $attempts = [['provider' => $primaryProvider, 'model' => $primaryModel]];
@@ -88,9 +89,9 @@ class GenerateInVideoCaptionAction
      */
     public function executeFromFrames(string $mergedFramePath, string $title, int $wordsPerCaption, ?int $userId = null): string
     {
+        $primaryProvider = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.ai_provider', config('mediaupload.module.content_generation.ai_provider', 'openai'));
+        $primaryModel = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.vision_model', config('mediaupload.module.content_generation.vision_model', 'gpt-4o'));
         $cfg = config('mediaupload.module.content_generation', []);
-        $primaryProvider = $cfg['ai_provider'] ?? 'openai';
-        $primaryModel = $cfg['vision_model'] ?? 'gpt-4o';
 
         // Build list of providers to try: Primary + Fallbacks
         $attempts = [['provider' => $primaryProvider, 'model' => $primaryModel]];

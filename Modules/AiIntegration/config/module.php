@@ -208,8 +208,8 @@ return [
         ],
         'ucontents' => [
             'name' => 'Ucontents AI (Self-Hosted)',
-            'models' => ['mistral-7b-instruct', 'moondream2'],
-            'vision_models' => ['moondream2'],
+            'models' => ['qwen2-vl-7b', 'mistral-7b-instruct', 'moondream2'],
+            'vision_models' => ['qwen2-vl-7b', 'moondream2'],
             'base_url' => 'https://gpt.ucontents.com',
         ],
     ],

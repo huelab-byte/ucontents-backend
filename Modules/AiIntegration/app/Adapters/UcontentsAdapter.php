@@ -29,6 +29,7 @@ class UcontentsAdapter implements ProviderAdapterInterface
      * Models that support vision/image analysis
      */
     private const VISION_MODELS = [
+        'qwen2-vl-7b',
         'moondream2',
         'moondream',
     ];
@@ -37,6 +38,7 @@ class UcontentsAdapter implements ProviderAdapterInterface
      * Text generation models
      */
     private const TEXT_MODELS = [
+        'qwen2-vl-7b',
         'mistral-7b-instruct',
         'mistral',
     ];
@@ -86,11 +88,11 @@ class UcontentsAdapter implements ProviderAdapterInterface
                 'X-API-Key' => $apiKey,
                 'Accept' => 'application/json',
             ])
-            ->timeout(120)
-            ->get("{$baseUrl}/generate", [
-                'prompt' => $dto->prompt,
-                'max_tokens' => $settings['max_tokens'],
-            ]);
+                ->timeout(120)
+                ->get("{$baseUrl}/generate", [
+                    'prompt' => $dto->prompt,
+                    'max_tokens' => $settings['max_tokens'],
+                ]);
 
             if (!$response->successful()) {
                 $errorBody = $response->body();
@@ -100,8 +102,12 @@ class UcontentsAdapter implements ProviderAdapterInterface
             $data = $response->json();
             $rawContent = $data['response'] ?? '';
 
+            Log::debug('Ucontents raw text response', ['response' => $rawContent]);
+
             // Clean the response - remove the prompt from the beginning
             $content = $this->cleanResponse($rawContent, $dto->prompt);
+
+            Log::debug('Ucontents cleaned text response', ['content' => $content]);
 
             // Estimate token count (approximate: 4 chars per token)
             $promptTokens = (int) ceil(strlen($dto->prompt) / 4);
@@ -112,7 +118,7 @@ class UcontentsAdapter implements ProviderAdapterInterface
                 'prompt_tokens' => $promptTokens,
                 'completion_tokens' => $completionTokens,
                 'total_tokens' => $promptTokens + $completionTokens,
-                'model' => $dto->model ?: 'mistral-7b-instruct',
+                'model' => $dto->model ?: 'qwen2-vl-7b',
             ];
 
         } catch (\Exception $e) {
@@ -169,21 +175,53 @@ class UcontentsAdapter implements ProviderAdapterInterface
             }
 
             $data = $response->json();
-            $rawContent = $data['response'] ?? '';
+            $description = $data['response'] ?? '';
 
-            // Clean the response - remove the prompt from the beginning
-            $content = $this->cleanResponse($rawContent, $dto->prompt);
+            Log::debug('Ucontents Vision analysis (step 1)', ['description' => $description]);
 
-            // Estimate token count
+            if (empty($description)) {
+                throw new \Exception('Vision model returned empty description');
+            }
+
+            // Step 2: Use the description to generate the final content via text model
+            // We prepend the description to the original prompt.
+            $originalPrompt = $dto->prompt;
+            $augmentedPrompt = "### CONTEXT: VIDEO FRAME ANALYSIS\n" .
+                "Below is a descriptive summary of what is happening in the video frames:\n\n" .
+                "VISUAL SUMMARY: " . $description . "\n\n" .
+                "### TASK:\n" .
+                "Using ONLY the 'VISUAL SUMMARY' above as your source of truth, fulfill the following request. " .
+                "DO NOT mention that this is a 'collage', 'grid', 'four frames', or 'screenshots'. Talk about it as a single cohesive video scene.\n\n" .
+                "### REQUEST:\n" .
+                $originalPrompt;
+
+            Log::debug('Ucontents Vision augmentation (step 2)', ['prompt' => substr($augmentedPrompt, 0, 500) . '...']);
+
+            // Create a new DTO for the text model call
+            $textDto = new AiModelCallDTO(
+                providerSlug: $dto->providerSlug,
+                model: 'qwen2-vl-7b', // Fallback to text model
+                prompt: $augmentedPrompt,
+                settings: $dto->settings,
+                module: $dto->module,
+                feature: $dto->feature,
+                metadata: [], // No image for step 2
+                scope: 'text_content',
+            );
+
+            $textResult = $this->callTextModel($baseUrl, $apiKey, $textDto);
+
+            // Estimate token count for the vision part
             $promptTokens = (int) ceil(strlen($dto->prompt) / 4);
-            $completionTokens = (int) ceil(strlen($content) / 4);
+            $completionTokens = (int) ceil(strlen($description) / 4);
 
             return [
-                'content' => $content,
-                'prompt_tokens' => $promptTokens,
-                'completion_tokens' => $completionTokens,
-                'total_tokens' => $promptTokens + $completionTokens,
-                'model' => $dto->model ?: 'moondream2',
+                'content' => $textResult['content'],
+                'prompt_tokens' => $promptTokens + ($textResult['prompt_tokens'] ?? 0),
+                'completion_tokens' => $completionTokens + ($textResult['completion_tokens'] ?? 0),
+                'total_tokens' => ($promptTokens + $completionTokens) + ($textResult['total_tokens'] ?? 0),
+                'model' => $dto->model ?: 'qwen2-vl-7b',
+                'description' => $description, // Pass through description for reference if needed
             ];
 
         } catch (\Exception $e) {
@@ -213,35 +251,34 @@ class UcontentsAdapter implements ProviderAdapterInterface
 
         // Check if response starts with the exact prompt
         if (str_starts_with($response, $prompt)) {
-            $response = substr($response, strlen($prompt));
+            $response = trim(substr($response, strlen($prompt)));
         }
 
         // Also check for [INST] format that Mistral uses: "[INST] prompt [/INST] response"
         // The API might return: "[INST] prompt [/INST] actual_response"
         if (preg_match('/\[\/INST\]\s*(.*)$/s', $response, $matches)) {
-            $response = $matches[1];
+            $response = trim($matches[1]);
         }
 
-        // Remove leading/trailing whitespace after cleanup
-        $response = trim($response);
+        // If the response is already short and doesn't seem to contain the prompt,
+        // we should be careful not to over-clean it.
+        // Qwen2-VL already trims the input, so if it's clean, we're good.
 
-        // Remove any remaining leading prompt artifacts
-        // Sometimes there might be variations with extra spaces or cases
+        // Final sanity check: if it still starts with exactly what we asked but in a different case
         $lowerResponse = strtolower($response);
         $lowerPrompt = strtolower($prompt);
-        
-        if (str_starts_with($lowerResponse, $lowerPrompt)) {
-            $response = substr($response, strlen($prompt));
-            $response = trim($response);
+
+        if (str_starts_with($lowerResponse, $lowerPrompt) && strlen($response) > strlen($prompt)) {
+            $response = trim(substr($response, strlen($prompt)));
         }
 
-        // Remove common prefixes that might remain
+        // Remove common prefixes that might remain after stripping prompt
+        // but ONLY if they are very short and at the very beginning.
         $prefixesToRemove = [
             ':',
             '-',
             '–',
             '→',
-            '\n',
         ];
 
         while (!empty($response) && in_array(substr($response, 0, 1), $prefixesToRemove)) {

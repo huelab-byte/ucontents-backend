@@ -14,17 +14,18 @@ class GenerateContentFromTitleAction
     public function __construct(
         private AiModelCallService $aiService,
         private AiApiKeyService $apiKeyService
-    ) {}
+    ) {
+    }
 
     /**
      * @param array $opts heading_length, heading_emoji, caption_length, hashtag_count
      * @return array{youtube_heading: string, social_caption: string, hashtags: string[]}
      */
-    public function execute(string $title, array $opts, ?int $userId = null): array
+    public function execute(string $title, array $opts, ?int $userId = null, string $customPrompt = ''): array
     {
+        $primaryProvider = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.ai_provider', config('mediaupload.module.content_generation.ai_provider', 'openai'));
+        $primaryModel = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.text_model', config('mediaupload.module.content_generation.text_model', 'gpt-4o'));
         $cfg = config('mediaupload.module.content_generation', []);
-        $primaryProvider = $cfg['ai_provider'] ?? 'openai';
-        $primaryModel = $cfg['text_model'] ?? 'gpt-4o';
 
         // Build list of providers to try: Primary + Fallbacks
         $attempts = [['provider' => $primaryProvider, 'model' => $primaryModel]];
@@ -45,7 +46,7 @@ class GenerateContentFromTitleAction
             }
         }
 
-        $prompt = $this->buildPrompt($title, $opts);
+        $prompt = $this->buildPrompt($title, $opts, $customPrompt);
         $lastException = null;
 
         foreach ($attempts as $attempt) {
@@ -54,7 +55,7 @@ class GenerateContentFromTitleAction
                 $model = $attempt['model'];
 
                 $apiKey = $this->apiKeyService->getBestApiKeyForScope($providerSlug, 'text_content', null, $userId);
-                
+
                 if (!$apiKey) {
                     continue;
                 }
@@ -71,7 +72,7 @@ class GenerateContentFromTitleAction
 
                 $res = $this->aiService->callModel($dto, $userId);
                 $text = $res['content'] ?? $res['message'] ?? '';
-                
+
                 return $this->parseResponse($text, $title, $opts);
 
             } catch (\Exception $e) {
@@ -82,12 +83,12 @@ class GenerateContentFromTitleAction
         }
 
         throw new \RuntimeException(
-            'Failed to generate content. All AI text providers failed. Last error: ' . 
+            'Failed to generate content. All AI text providers failed. Last error: ' .
             ($lastException ? $lastException->getMessage() : 'No active API keys found.')
         );
     }
 
-    private function buildPrompt(string $title, array $opts): string
+    private function buildPrompt(string $title, array $opts, string $customPrompt = ''): string
     {
         $headingWords = max(1, (int) ($opts['heading_length'] ?? 10));
         $emoji = !empty($opts['heading_emoji']);
@@ -97,15 +98,20 @@ class GenerateContentFromTitleAction
         $emojiLine = $emoji
             ? 'MANDATORY: Include 1–2 relevant emojis in the heading.'
             : 'Do not use emojis in the heading.';
-        
+
+        $userInstructions = '';
+        if (!empty($customPrompt)) {
+            $userInstructions = "\nUSER CUSTOM INSTRUCTIONS:\n" . $customPrompt . "\n";
+        }
+
         return <<<PROMPT
 You are a social media content expert. Based on this video title, create engaging content.
 
 Video title: "{$title}"
-
+{$userInstructions}
 CRITICAL LENGTH REQUIREMENTS - YOU MUST FOLLOW THESE EXACTLY:
 1. YouTube Heading: EXACTLY {$headingWords} words (not more, not less). {$emojiLine}
-2. Social Caption: EXACTLY {$captionWords} words (not more, not less). Include a hook and call-to-action.
+2. Social Caption: EXACTLY {$captionWords} words (not more, not less). Include a hook and call-to-action. Do NOT include hashtags in this field.
 3. Hashtags: EXACTLY {$hc} hashtags with # symbol.
 
 Create ORIGINAL content that expands on the title theme. Do NOT just repeat the title.
@@ -130,9 +136,18 @@ PROMPT;
             }, $tags), 0, $hc);
             $heading = $json['youtube_heading'] ?? 'Video: ' . $title;
             $heading = $this->ensureHeadingEmoji($heading, $opts);
+
+            // Clean caption - Strictly remove any hash tags that might have slipped into the caption
+            $caption = $json['social_caption'] ?? '';
+            // Remove all hashtags from the caption
+            $caption = preg_replace('/#\w+/u', '', $caption);
+            // Replace multiple spaces with a single space
+            $caption = preg_replace('/\s+/u', ' ', $caption);
+            $caption = trim($caption);
+
             return [
                 'youtube_heading' => $heading,
-                'social_caption' => $json['social_caption'] ?? '',
+                'social_caption' => $caption,
                 'hashtags' => $tags,
             ];
         }
@@ -213,7 +228,7 @@ PROMPT;
                             $candidates[] = $decoded;
                         }
                         // We reset start to look for the next object
-                        $start = -1; 
+                        $start = -1;
                     }
                 }
             }

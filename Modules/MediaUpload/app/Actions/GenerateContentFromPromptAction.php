@@ -14,7 +14,8 @@ class GenerateContentFromPromptAction
     public function __construct(
         private AiModelCallService $aiService,
         private AiApiKeyService $apiKeyService
-    ) {}
+    ) {
+    }
 
     /**
      * @param array $opts heading_length, heading_emoji, caption_length, hashtag_count
@@ -22,9 +23,9 @@ class GenerateContentFromPromptAction
      */
     public function execute(string $customPrompt, array $opts, ?int $userId = null): array
     {
+        $primaryProvider = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.ai_provider', config('mediaupload.module.content_generation.ai_provider', 'openai'));
+        $primaryModel = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.text_model', config('mediaupload.module.content_generation.text_model', 'gpt-4o'));
         $cfg = config('mediaupload.module.content_generation', []);
-        $primaryProvider = $cfg['ai_provider'] ?? 'openai';
-        $primaryModel = $cfg['text_model'] ?? 'gpt-4o';
 
         // Build list of providers to try: Primary + Fallbacks
         $attempts = [['provider' => $primaryProvider, 'model' => $primaryModel]];
@@ -54,7 +55,7 @@ class GenerateContentFromPromptAction
                 $model = $attempt['model'];
 
                 $apiKey = $this->apiKeyService->getBestApiKeyForScope($providerSlug, 'text_content', null, $userId);
-                
+
                 if (!$apiKey) {
                     continue;
                 }
@@ -71,7 +72,7 @@ class GenerateContentFromPromptAction
 
                 $res = $this->aiService->callModel($dto, $userId);
                 $text = $res['content'] ?? $res['message'] ?? '';
-                
+
                 return $this->parseResponse($text, $opts);
 
             } catch (\Exception $e) {
@@ -82,7 +83,7 @@ class GenerateContentFromPromptAction
         }
 
         throw new \RuntimeException(
-            'Failed to generate content from prompt. All AI text providers failed. Last error: ' . 
+            'Failed to generate content from prompt. All AI text providers failed. Last error: ' .
             ($lastException ? $lastException->getMessage() : 'No active API keys found.')
         );
     }
@@ -93,11 +94,11 @@ class GenerateContentFromPromptAction
         $emoji = !empty($opts['heading_emoji']);
         $captionWords = max(1, (int) ($opts['caption_length'] ?? 30));
         $hc = max(1, (int) ($opts['hashtag_count'] ?? 3));
-        
+
         $emojiLine = $emoji
             ? 'MANDATORY: Include 1–2 relevant emojis in the heading.'
             : 'Do not use emojis in the heading.';
-        
+
         return <<<PROMPT
 You are a social media content expert. The user provided this context/prompt about their video:
 
@@ -105,7 +106,7 @@ You are a social media content expert. The user provided this context/prompt abo
 
 CRITICAL LENGTH REQUIREMENTS - YOU MUST FOLLOW THESE EXACTLY:
 1. YouTube Heading: EXACTLY {$headingWords} words (not more, not less). {$emojiLine}
-2. Social Caption: EXACTLY {$captionWords} words (not more, not less). Include a hook and call-to-action.
+2. Social Caption: EXACTLY {$captionWords} words (not more, not less). Include a hook and call-to-action. Do NOT include hashtags in this field.
 3. Hashtags: EXACTLY {$hc} hashtags with # symbol.
 
 Create engaging content based on the context provided.
@@ -130,9 +131,18 @@ PROMPT;
             }, $tags), 0, $hc);
             $heading = $json['youtube_heading'] ?? 'Video';
             $heading = $this->ensureHeadingEmoji($heading, $opts);
+
+            // Clean caption - Strictly remove any hash tags that might have slipped into the caption
+            $caption = $json['social_caption'] ?? '';
+            // Remove all hashtags from the caption
+            $caption = preg_replace('/#\w+/u', '', $caption);
+            // Replace multiple spaces with a single space
+            $caption = preg_replace('/\s+/u', ' ', $caption);
+            $caption = trim($caption);
+
             return [
                 'youtube_heading' => $heading,
-                'social_caption' => $json['social_caption'] ?? '',
+                'social_caption' => $caption,
                 'hashtags' => $tags,
             ];
         }
@@ -209,7 +219,7 @@ PROMPT;
                             $candidates[] = $decoded;
                         }
                         // We reset start to look for the next object
-                        $start = -1; 
+                        $start = -1;
                     }
                 }
             }
