@@ -155,8 +155,20 @@ if [ -f "$APP_DIR/deployment/php8.2-fpm-upload-limits.ini" ]; then
 fi
 
 # Update Nginx config
-if [ -f "$APP_DIR/deployment/nginx-app.ucontents.com.conf" ]; then
-    echo "Updating Nginx configuration..."
+# Check if config exists in sites-available (to preserve SSL config)
+if [ -f "/etc/nginx/sites-available/app.ucontents.com" ]; then
+    echo "Updating Nginx upload limits (in-place)..."
+    # Use sed to update the limit without overwriting the file (preserving SSL settings)
+    sed -i 's/client_max_body_size [0-9]*[MG];/client_max_body_size 1024M;/g' /etc/nginx/sites-available/app.ucontents.com 2>/dev/null || \
+    sudo sed -i 's/client_max_body_size [0-9]*[MG];/client_max_body_size 1024M;/g' /etc/nginx/sites-available/app.ucontents.com 2>/dev/null
+
+    # Reload Nginx
+    echo "Reloading Nginx..."
+    systemctl reload nginx 2>/dev/null || sudo systemctl reload nginx 2>/dev/null || echo -e "${YELLOW}Warning: Could not reload Nginx.${NC}"
+
+# If not found in /etc/nginx, copy from deployment folder (first install)
+elif [ -f "$APP_DIR/deployment/nginx-app.ucontents.com.conf" ]; then
+    echo "Installing Nginx configuration..."
     # Update sites-available
     cp "$APP_DIR/deployment/nginx-app.ucontents.com.conf" /etc/nginx/sites-available/app.ucontents.com 2>/dev/null || \
     sudo cp "$APP_DIR/deployment/nginx-app.ucontents.com.conf" /etc/nginx/sites-available/app.ucontents.com 2>/dev/null || \
