@@ -21,18 +21,19 @@ class GoogleAdapter implements ProviderAdapterInterface
 
     public function makeAuthorizationRedirect(User $user, SocialProviderApp $app, string $callbackUrl, string $state): RedirectResponse
     {
-        config(['services.google' => [
-            'client_id' => $app->client_id,
-            'client_secret' => $app->client_secret,
-            'redirect' => $callbackUrl,
-        ]]);
+        config([
+            'services.google' => [
+                'client_id' => $app->client_id,
+                'client_secret' => $app->client_secret,
+                'redirect' => $callbackUrl,
+            ]
+        ]);
 
         $scopes = $app->scopes ?: [
             'openid',
             'profile',
             'email',
-            'https://www.googleapis.com/auth/youtube.readonly',
-            'https://www.googleapis.com/auth/youtube.upload', // Required for bulk posting to YouTube
+            'https://www.googleapis.com/auth/youtube', // Use the verified "Manage your YouTube account" scope to avoid unverified warning
         ];
 
         return Socialite::driver('google')
@@ -45,11 +46,13 @@ class GoogleAdapter implements ProviderAdapterInterface
 
     public function handleCallback(User $user, SocialProviderApp $app, string $callbackUrl, ?array $channelTypes = null): array
     {
-        config(['services.google' => [
-            'client_id' => $app->client_id,
-            'client_secret' => $app->client_secret,
-            'redirect' => $callbackUrl,
-        ]]);
+        config([
+            'services.google' => [
+                'client_id' => $app->client_id,
+                'client_secret' => $app->client_secret,
+                'redirect' => $callbackUrl,
+            ]
+        ]);
 
         $socialiteUser = Socialite::driver('google')
             ->redirectUrl($callbackUrl)

@@ -14,7 +14,8 @@ class ContentItemCreatorService
 {
     public function __construct(
         private CsvParserService $csvParser
-    ) {}
+    ) {
+    }
 
     /**
      * Create content items for a campaign based on content source
@@ -53,7 +54,7 @@ class ContentItemCreatorService
         $count = 0;
         foreach ($mediaUploads as $media) {
             $mediaUrl = $media->storageFile?->url;
-            if (! $mediaUrl && $media->storageFile) {
+            if (!$mediaUrl && $media->storageFile) {
                 try {
                     $driver = StorageDriverFactory::make($media->storageFile->driver);
                     $mediaUrl = $driver->url($media->storageFile->path);
@@ -61,9 +62,22 @@ class ContentItemCreatorService
                     $mediaUrl = null;
                 }
             }
+            $mediaItems = [];
+            if ($mediaUrl) {
+                // Get mime_type from StorageFile if available
+                $mimeType = $media->storageFile?->mime_type ?? '';
+                $isVideo = str_starts_with($mimeType, 'video/');
+                $mediaItems[] = [
+                    'url' => $mediaUrl,
+                    'mime_type' => $mimeType,
+                    'is_video' => $isVideo,
+                ];
+            }
+
             $payload = [
                 'caption' => $media->social_caption ?? $media->title ?? '',
                 'media_urls' => $mediaUrl ? [$mediaUrl] : [],
+                'media_items' => $mediaItems,
                 'hashtags' => is_array($media->hashtags) ? $media->hashtags : [],
                 'youtube_heading' => $media->youtube_heading,
             ];
@@ -84,7 +98,7 @@ class ContentItemCreatorService
     protected function createFromCsv(BulkPostingCampaign $campaign, int $storageFileId, int $userId): int
     {
         $storageFile = StorageFile::find($storageFileId);
-        if (! $storageFile || $storageFile->user_id !== $userId) {
+        if (!$storageFile || $storageFile->user_id !== $userId) {
             return 0;
         }
 

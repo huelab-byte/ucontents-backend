@@ -138,14 +138,43 @@ php artisan storage:link || true
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
+# Apply system configurations (PHP & Nginx)
+echo -e "${GREEN}[11/13] Applying system configuration updates...${NC}"
+
+# Update PHP limits
+if [ -f "$APP_DIR/deployment/php8.2-fpm-upload-limits.ini" ]; then
+    echo "Updating PHP upload limits..."
+    # Try direct copy, then sudo
+    cp "$APP_DIR/deployment/php8.2-fpm-upload-limits.ini" /etc/php/8.2/fpm/conf.d/99-upload-limits.ini 2>/dev/null || \
+    sudo cp "$APP_DIR/deployment/php8.2-fpm-upload-limits.ini" /etc/php/8.2/fpm/conf.d/99-upload-limits.ini 2>/dev/null || \
+    echo -e "${YELLOW}Warning: Could not copy PHP config. Permission denied.${NC}"
+    
+    # Restart PHP-FPM
+    echo "Restarting PHP-FPM..."
+    systemctl restart php8.2-fpm 2>/dev/null || sudo systemctl restart php8.2-fpm 2>/dev/null || echo -e "${YELLOW}Warning: Could not restart php8.2-fpm.${NC}"
+fi
+
+# Update Nginx config
+if [ -f "$APP_DIR/deployment/nginx-app.ucontents.com.conf" ]; then
+    echo "Updating Nginx configuration..."
+    # Update sites-available
+    cp "$APP_DIR/deployment/nginx-app.ucontents.com.conf" /etc/nginx/sites-available/app.ucontents.com 2>/dev/null || \
+    sudo cp "$APP_DIR/deployment/nginx-app.ucontents.com.conf" /etc/nginx/sites-available/app.ucontents.com 2>/dev/null || \
+    echo -e "${YELLOW}Warning: Could not copy Nginx config. Permission denied.${NC}"
+    
+    # Reload Nginx
+    echo "Reloading Nginx..."
+    systemctl reload nginx 2>/dev/null || sudo systemctl reload nginx 2>/dev/null || echo -e "${YELLOW}Warning: Could not reload Nginx.${NC}"
+fi
+
 # Restart queue workers (graceful restart)
-echo -e "${GREEN}[11/12] Restarting queue workers...${NC}"
+echo -e "${GREEN}[12/13] Restarting queue workers...${NC}"
 php artisan queue:restart
-systemctl restart laravel-queue-worker 2>/dev/null || echo -e "${YELLOW}Queue worker service not found or not running${NC}"
+systemctl restart laravel-queue-worker 2>/dev/null || sudo systemctl restart laravel-queue-worker 2>/dev/null || echo -e "${YELLOW}Queue worker service not found or not running${NC}"
 
 # Restart scheduler (for scheduled tasks like bulk-posting:process-schedule)
-echo -e "${GREEN}[12/12] Restarting Laravel scheduler...${NC}"
-systemctl restart laravel-scheduler 2>/dev/null || echo -e "${YELLOW}Scheduler service not found or not running. Install with: sudo cp deployment/laravel-scheduler.service /etc/systemd/system/ && sudo systemctl enable laravel-scheduler && sudo systemctl start laravel-scheduler${NC}"
+echo -e "${GREEN}[13/13] Restarting Laravel scheduler...${NC}"
+systemctl restart laravel-scheduler 2>/dev/null || sudo systemctl restart laravel-scheduler 2>/dev/null || echo -e "${YELLOW}Scheduler service not found or not running. Install with: sudo cp deployment/laravel-scheduler.service /etc/systemd/system/ && sudo systemctl enable laravel-scheduler && sudo systemctl start laravel-scheduler${NC}"
 
 # Disable maintenance mode
 echo -e "${GREEN}Disabling maintenance mode...${NC}"

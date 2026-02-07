@@ -227,7 +227,7 @@ class UserManagementSeeder extends Seeder
                     'edit_own_profile',
                     'call_ai_models',
                     'use_prompt_templates',
-                    'use_ai_chat',
+                    // 'use_ai_chat',
                     // Library & Overlay – browse shared (read-only)
                     'use_audio_library',
                     'use_image_library',
@@ -377,10 +377,20 @@ class UserManagementSeeder extends Seeder
         }
 
         // Role & Permission Management
-        if (in_array($slug, [
-            'view_roles', 'create_role', 'update_role', 'delete_role', 'manage_roles',
-            'view_permissions', 'create_permission', 'update_permission', 'delete_permission', 'manage_permissions'
-        ])) {
+        if (
+            in_array($slug, [
+                'view_roles',
+                'create_role',
+                'update_role',
+                'delete_role',
+                'manage_roles',
+                'view_permissions',
+                'create_permission',
+                'update_permission',
+                'delete_permission',
+                'manage_permissions'
+            ])
+        ) {
             return 'Role & Permission';
         }
 
@@ -400,28 +410,54 @@ class UserManagementSeeder extends Seeder
         }
 
         // Client/API Management
-        if (in_array($slug, [
-            'view_clients', 'create_client', 'update_client', 'delete_client', 'manage_clients',
-            'generate_api_keys', 'revoke_api_keys', 'rotate_api_keys', 'view_api_key_activity'
-        ])) {
+        if (
+            in_array($slug, [
+                'view_clients',
+                'create_client',
+                'update_client',
+                'delete_client',
+                'manage_clients',
+                'generate_api_keys',
+                'revoke_api_keys',
+                'rotate_api_keys',
+                'view_api_key_activity'
+            ])
+        ) {
             return 'Client Settings';
         }
 
         // Email Configuration
-        if (in_array($slug, [
-            'view_email_config', 'update_email_config', 'manage_email_config',
-            'view_email_templates', 'create_email_template', 'update_email_template', 
-            'delete_email_template', 'manage_email_templates', 'send_test_email'
-        ])) {
+        if (
+            in_array($slug, [
+                'view_email_config',
+                'update_email_config',
+                'manage_email_config',
+                'view_email_templates',
+                'create_email_template',
+                'update_email_template',
+                'delete_email_template',
+                'manage_email_templates',
+                'send_test_email'
+            ])
+        ) {
             return 'Email Configuration';
         }
 
         // Storage Management
-        if (in_array($slug, [
-            'view_storage_config', 'update_storage_config', 'manage_storage_config',
-            'view_storage_analytics', 'migrate_storage', 'cleanup_storage',
-            'upload_files', 'bulk_upload_files', 'delete_files', 'view_files'
-        ])) {
+        if (
+            in_array($slug, [
+                'view_storage_config',
+                'update_storage_config',
+                'manage_storage_config',
+                'view_storage_analytics',
+                'migrate_storage',
+                'cleanup_storage',
+                'upload_files',
+                'bulk_upload_files',
+                'delete_files',
+                'view_files'
+            ])
+        ) {
             return 'Storage Management';
         }
 
@@ -441,84 +477,150 @@ class UserManagementSeeder extends Seeder
         }
 
         // AI Integration
-        if (in_array($slug, [
-            'manage_ai_providers', 'manage_ai_api_keys', 'view_ai_usage',
-            'manage_prompt_templates', 'call_ai_models', 'use_prompt_templates',
-            'use_ai_chat'
-        ])) {
+        if (
+            in_array($slug, [
+                'manage_ai_providers',
+                'manage_ai_api_keys',
+                'view_ai_usage',
+                'manage_prompt_templates',
+                'call_ai_models',
+                'use_prompt_templates',
+                'use_ai_chat'
+            ])
+        ) {
             return 'AI Integration';
         }
 
         // Notifications
-        if (in_array($slug, [
-            'view_notification_settings', 'manage_notification_settings',
-            'view_notifications', 'view_admin_notifications', 'manage_announcements'
-        ])) {
+        if (
+            in_array($slug, [
+                'view_notification_settings',
+                'manage_notification_settings',
+                'view_notifications',
+                'view_admin_notifications',
+                'manage_announcements'
+            ])
+        ) {
             return 'Notification Management';
         }
 
         // Payment Gateway
-        if (in_array($slug, [
-            'view_payment_gateways', 'manage_payment_gateways',
-            'view_invoice_templates', 'manage_invoice_templates'
-        ])) {
+        if (
+            in_array($slug, [
+                'view_payment_gateways',
+                'manage_payment_gateways',
+                'view_invoice_templates',
+                'manage_invoice_templates'
+            ])
+        ) {
             return 'Payment Gateway';
         }
 
         // Footage Library
-        if (in_array($slug, [
-            'upload_footage', 'bulk_upload_footage', 'view_footage', 'manage_footage',
-            'search_footage', 'manage_footage_folders', 'view_all_footage',
-            'delete_any_footage', 'view_footage_stats', 'view_footage_library',
-            'manage_footage_library', 'use_footage_library'
-        ])) {
+        if (
+            in_array($slug, [
+                'upload_footage',
+                'bulk_upload_footage',
+                'view_footage',
+                'manage_footage',
+                'search_footage',
+                'manage_footage_folders',
+                'view_all_footage',
+                'delete_any_footage',
+                'view_footage_stats',
+                'view_footage_library',
+                'manage_footage_library',
+                'use_footage_library'
+            ])
+        ) {
             return 'FootageLibrary';
         }
 
         // Audio Library
-        if (in_array($slug, [
-            'upload_audio', 'bulk_upload_audio', 'view_audio', 'manage_audio',
-            'manage_audio_folders', 'view_all_audio', 'delete_any_audio',
-            'view_audio_stats', 'view_audio_library', 'manage_audio_library',
-            'use_audio_library'
-        ])) {
+        if (
+            in_array($slug, [
+                'upload_audio',
+                'bulk_upload_audio',
+                'view_audio',
+                'manage_audio',
+                'manage_audio_folders',
+                'view_all_audio',
+                'delete_any_audio',
+                'view_audio_stats',
+                'view_audio_library',
+                'manage_audio_library',
+                'use_audio_library'
+            ])
+        ) {
             return 'AudioLibrary';
         }
 
         // Image Library
-        if (in_array($slug, [
-            'upload_image', 'bulk_upload_image', 'view_image', 'manage_image',
-            'manage_image_folders', 'view_all_image', 'delete_any_image',
-            'view_image_stats', 'view_image_library', 'manage_image_library',
-            'use_image_library'
-        ])) {
+        if (
+            in_array($slug, [
+                'upload_image',
+                'bulk_upload_image',
+                'view_image',
+                'manage_image',
+                'manage_image_folders',
+                'view_all_image',
+                'delete_any_image',
+                'view_image_stats',
+                'view_image_library',
+                'manage_image_library',
+                'use_image_library'
+            ])
+        ) {
             return 'ImageLibrary';
         }
 
         // BGM Library
-        if (in_array($slug, [
-            'upload_bgm', 'bulk_upload_bgm', 'view_bgm', 'manage_bgm',
-            'manage_bgm_folders', 'view_all_bgm', 'delete_any_bgm',
-            'view_bgm_stats', 'use_bgm_library'
-        ])) {
+        if (
+            in_array($slug, [
+                'upload_bgm',
+                'bulk_upload_bgm',
+                'view_bgm',
+                'manage_bgm',
+                'manage_bgm_folders',
+                'view_all_bgm',
+                'delete_any_bgm',
+                'view_bgm_stats',
+                'use_bgm_library'
+            ])
+        ) {
             return 'BgmLibrary';
         }
 
         // Video Overlay
-        if (in_array($slug, [
-            'upload_video_overlay', 'view_video_overlay', 'manage_video_overlay',
-            'manage_video_overlay_folders', 'view_all_video_overlay',
-            'delete_any_video_overlay', 'view_video_overlay_stats', 'use_video_overlay'
-        ])) {
+        if (
+            in_array($slug, [
+                'upload_video_overlay',
+                'view_video_overlay',
+                'manage_video_overlay',
+                'manage_video_overlay_folders',
+                'view_all_video_overlay',
+                'delete_any_video_overlay',
+                'view_video_overlay_stats',
+                'use_video_overlay'
+            ])
+        ) {
             return 'VideoOverlay';
         }
 
         // Image Overlay
-        if (in_array($slug, [
-            'upload_image_overlay', 'bulk_upload_image_overlay', 'view_image_overlay',
-            'manage_image_overlay', 'manage_image_overlay_folders', 'view_all_image_overlay',
-            'delete_any_image_overlay', 'view_image_overlay_stats', 'use_image_overlay'
-        ])) {
+        if (
+            in_array($slug, [
+                'upload_image_overlay',
+                'bulk_upload_image_overlay',
+                'view_image_overlay',
+                'manage_image_overlay',
+                'manage_image_overlay_folders',
+                'view_all_image_overlay',
+                'delete_any_image_overlay',
+                'view_image_overlay_stats',
+                'use_image_overlay'
+            ])
+        ) {
             return 'ImageOverlay';
         }
 
@@ -528,10 +630,16 @@ class UserManagementSeeder extends Seeder
         }
 
         // Support Tickets
-        if (in_array($slug, [
-            'view_own_tickets', 'create_tickets', 'reply_to_own_tickets',
-            'view_all_tickets', 'manage_tickets', 'assign_tickets'
-        ])) {
+        if (
+            in_array($slug, [
+                'view_own_tickets',
+                'create_tickets',
+                'reply_to_own_tickets',
+                'view_all_tickets',
+                'manage_tickets',
+                'assign_tickets'
+            ])
+        ) {
             return 'Support';
         }
 
