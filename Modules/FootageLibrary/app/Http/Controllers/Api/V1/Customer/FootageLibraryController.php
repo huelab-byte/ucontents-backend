@@ -261,7 +261,8 @@ class FootageLibraryController extends BaseApiController
         $this->authorize('viewAny', Footage::class);
 
         try {
-            $dto = SearchFootageDTO::fromArray($request->validated());
+            $data = array_merge($request->validated(), ['user_id' => auth()->id()]);
+            $dto = SearchFootageDTO::fromArray($data);
             $results = $this->searchAction->execute($dto);
 
             return $this->success(

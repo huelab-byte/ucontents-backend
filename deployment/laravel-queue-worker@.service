@@ -1,0 +1,23 @@
+[Unit]
+Description=Laravel Queue Worker (instance %i)
+After=network.target redis-server.service mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/ucontents-backend
+ExecStart=/usr/bin/php /var/www/ucontents-backend/artisan queue:work redis --queue=default,media-uploads,emails,footage-uploads,audio-uploads,bgm-uploads --sleep=3 --tries=3 --max-time=3600 --timeout=300
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Resource limits
+LimitNOFILE=65535
+
+# Environment
+Environment="APP_ENV=production"
+
+[Install]
+WantedBy=multi-user.target

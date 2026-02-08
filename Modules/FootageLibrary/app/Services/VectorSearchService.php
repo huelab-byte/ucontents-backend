@@ -18,17 +18,24 @@ class VectorSearchService
     ) {}
 
     /**
-     * Search for footage using vector similarity
+     * Search for footage using vector similarity.
+     *
+     * @param string $searchText Search query text
+     * @param array $filters Optional filters (folder_id, orientation, duration, etc.)
+     * @param int $limit Max results
+     * @param float $minSimilarity Minimum similarity score
+     * @param int|null $userId When set, use this user's AI API keys for embedding (customer key over admin key)
      */
     public function search(
         string $searchText,
         array $filters = [],
         int $limit = 10,
-        float $minSimilarity = 0.5
+        float $minSimilarity = 0.5,
+        ?int $userId = null
     ): array {
         try {
-            // Generate embedding for search text
-            $embedding = $this->generateEmbedding($searchText);
+            // Generate embedding for search text (uses customer key when userId provided)
+            $embedding = $this->generateEmbedding($searchText, $userId);
 
             // Search in Qdrant
             $results = $this->qdrantService->search($embedding, $filters, $limit * 2, $minSimilarity);
@@ -154,9 +161,11 @@ class VectorSearchService
     }
 
     /**
-     * Generate embedding for search text
+     * Generate embedding for search text.
+     *
+     * @param int|null $userId When set, use this user's API key for the provider (customer key over admin)
      */
-    private function generateEmbedding(string $text): array
+    private function generateEmbedding(string $text, ?int $userId = null): array
     {
         $config = config('footagelibrary.module.metadata', [
             'ai_provider' => env('FOOTAGE_METADATA_AI_PROVIDER', 'openai'),
@@ -172,7 +181,7 @@ class VectorSearchService
             scope: 'embedding',
         );
 
-        $response = $this->aiService->callModel($dto);
+        $response = $this->aiService->callModel($dto, $userId);
         
         // Extract embedding from response
         if (isset($response['embedding'])) {

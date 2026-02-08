@@ -32,7 +32,9 @@ class ProcessMediaUploadJob implements ShouldQueue
 
     public function __construct(
         public int $queueId
-    ) {}
+    ) {
+        $this->queue = config('mediaupload.module.upload.queue_name', 'default');
+    }
 
     public function handle(
         ContentGenerationService $contentService,
@@ -56,10 +58,19 @@ class ProcessMediaUploadJob implements ShouldQueue
         try {
             $queueItem->markAsProcessing();
 
-            $localPath = Storage::disk('local')->path($queueItem->file_path);
-            if (!file_exists($localPath)) {
-                throw new \RuntimeException('Temporary file not found');
+            $disk = Storage::disk('local');
+            $filePath = $queueItem->file_path;
+            if (!$filePath || !$disk->exists($filePath)) {
+                $resolvedPath = $filePath ? $disk->path($filePath) : '(empty path)';
+                Log::error('ProcessMediaUploadJob: temporary file not found', [
+                    'queue_id' => $this->queueId,
+                    'file_path' => $filePath,
+                    'resolved_path' => $resolvedPath,
+                ]);
+                throw new \RuntimeException('Temporary file not found at ' . ($filePath ?? 'null'));
             }
+
+            $localPath = $disk->path($filePath);
 
             $queueItem->updateProgress(15);
 
@@ -131,17 +142,17 @@ class ProcessMediaUploadJob implements ShouldQueue
                         $templateOrConfig = is_array($captionConfig) && !empty($captionConfig)
                             ? $captionConfig
                             : $captionTemplate;
-                        
+
                         Log::info('Caption burn config', [
                             'queue_id' => $this->queueId,
                             'caption_config' => $captionConfig,
-                            'template_or_config' => $templateOrConfig instanceof \Modules\MediaUpload\Models\CaptionTemplate 
+                            'template_or_config' => $templateOrConfig instanceof \Modules\MediaUpload\Models\CaptionTemplate
                                 ? ['type' => 'template', 'id' => $templateOrConfig->id, 'words_per_caption' => $templateOrConfig->words_per_caption]
                                 : ['type' => 'config', 'data' => $templateOrConfig],
                             'loop_count' => $loopCount,
                             'duration_after_loop' => $duration,
                         ]);
-                        
+
                         $captionBurnService->burnCaptions(
                             $outputPath,
                             $burnedPath,
@@ -165,6 +176,8 @@ class ProcessMediaUploadJob implements ShouldQueue
             $uploadedFile = new UploadedFile($outputPath, $queueItem->file_name, $queueItem->mime_type, null, true);
             // Use folder's storage_path (user-defined name) instead of generated folder-{id}
             $storagePath = $folder->getFullStoragePath();
+
+            // Final file is always stored via StorageManagement (active storage)
             $storageFile = $uploadAction->execute($uploadedFile, $storagePath, $queueItem->user_id);
 
             $queueItem->updateProgress(85);
@@ -198,7 +211,9 @@ class ProcessMediaUploadJob implements ShouldQueue
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            throw $e;
+            // Do not rethrow: we already marked the queue item as failed. Let Laravel remove the
+            // job from the queue so the worker continues to the next job instead of retrying
+            // (retries rarely help for "No AI API key", "file not found", etc.).
         }
     }
 

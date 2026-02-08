@@ -18,20 +18,13 @@ class GenerateContentFromFramesAction
 
     public function execute(string $mergedFramePath, string $title, array $opts, ?int $userId = null, string $customPrompt = ''): array
     {
-        $primaryProvider = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.ai_provider', config('mediaupload.module.content_generation.ai_provider', 'openai'));
-        $primaryModel = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.vision_model', config('mediaupload.module.content_generation.vision_model', 'gpt-4o'));
         $cfg = config('mediaupload.module.content_generation', []);
-
-        // Build list of providers to try: Primary + Fallbacks
-        $attempts = [['provider' => $primaryProvider, 'model' => $primaryModel]];
-
-        if (!empty($cfg['vision_fallbacks'])) {
-            foreach ($cfg['vision_fallbacks'] as $fallback) {
-                // Avoid duplicates
-                if ($fallback['provider'] !== $primaryProvider || $fallback['model'] !== $primaryModel) {
-                    $attempts[] = $fallback;
-                }
-            }
+        // Use only fallback list: first provider with an active key (in AI Integration) wins. No separate setting.
+        $attempts = $cfg['vision_fallbacks'] ?? [];
+        if (empty($attempts)) {
+            throw new \RuntimeException(
+                'No AI providers configured for vision content. Add vision_fallbacks in config/mediaupload.module.content_generation and add active API keys in AI Integration.'
+            );
         }
 
         $prompt = $this->buildPrompt($title, $opts, $customPrompt);
@@ -43,7 +36,7 @@ class GenerateContentFromFramesAction
                 $providerSlug = $attempt['provider'];
                 $model = $attempt['model'];
 
-                $apiKey = $this->apiKeyService->getBestApiKeyForScope($providerSlug, 'vision_content');
+                $apiKey = $this->apiKeyService->getBestApiKeyForScope($providerSlug, 'vision_content', null, $userId);
 
                 if (!$apiKey) {
                     continue; // No key for this provider, try next

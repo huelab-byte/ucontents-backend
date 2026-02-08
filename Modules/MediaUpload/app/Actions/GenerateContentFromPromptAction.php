@@ -23,27 +23,13 @@ class GenerateContentFromPromptAction
      */
     public function execute(string $customPrompt, array $opts, ?int $userId = null): array
     {
-        $primaryProvider = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.ai_provider', config('mediaupload.module.content_generation.ai_provider', 'openai'));
-        $primaryModel = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.text_model', config('mediaupload.module.content_generation.text_model', 'gpt-4o'));
         $cfg = config('mediaupload.module.content_generation', []);
-
-        // Build list of providers to try: Primary + Fallbacks
-        $attempts = [['provider' => $primaryProvider, 'model' => $primaryModel]];
-
-        if (!empty($cfg['text_fallbacks'])) {
-            foreach ($cfg['text_fallbacks'] as $fallback) {
-                // Avoid duplicates
-                $exists = false;
-                foreach ($attempts as $a) {
-                    if ($a['provider'] === $fallback['provider'] && $a['model'] === $fallback['model']) {
-                        $exists = true;
-                        break;
-                    }
-                }
-                if (!$exists) {
-                    $attempts[] = $fallback;
-                }
-            }
+        // Use only fallback list: first provider with an active key (in AI Integration) wins. No separate setting.
+        $attempts = $cfg['text_fallbacks'] ?? [];
+        if (empty($attempts)) {
+            throw new \RuntimeException(
+                'No AI providers configured for text content. Add text_fallbacks in config/mediaupload.module.content_generation and add active API keys in AI Integration.'
+            );
         }
 
         $prompt = $this->buildPrompt($customPrompt, $opts);

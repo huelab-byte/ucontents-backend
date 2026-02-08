@@ -58,6 +58,7 @@ class AiApiKey extends Model
     /**
      * Check if this API key supports a specific scope.
      * If no scopes are defined, the key is considered universal (supports all scopes).
+     * If the key has 'general' in its scopes, it supports any requested scope.
      *
      * @param string|null $scope The scope to check, or null for general use
      * @return bool
@@ -71,6 +72,11 @@ class AiApiKey extends Model
 
         // If no specific scope requested, any scoped key can handle it
         if ($scope === null || $scope === 'general') {
+            return true;
+        }
+
+        // Key with 'general' scope can be used for any task
+        if (in_array('general', $this->scopes, true)) {
             return true;
         }
 

@@ -70,13 +70,14 @@ class AiApiKeyController extends BaseApiController
     }
 
     /**
-     * Create a new API key
+     * Create a new API key (always stored as system key so customers without their own key can use it).
      */
     public function store(StoreApiKeyRequest $request): JsonResponse
     {
         $this->authorize('create', AiApiKey::class);
 
-        $dto = CreateApiKeyDTO::fromArray($request->validated());
+        $data = array_merge($request->validated(), ['user_id' => null]);
+        $dto = CreateApiKeyDTO::fromArray($data);
         $apiKey = $this->createApiKeyAction->execute($dto);
         $apiKey->load('provider');
 
@@ -88,7 +89,7 @@ class AiApiKeyController extends BaseApiController
     }
 
     /**
-     * Update an API key
+     * Update an API key (ensure admin-managed keys stay as system keys).
      */
     public function update(UpdateApiKeyRequest $request, AiApiKey $apiKey): JsonResponse
     {
@@ -96,6 +97,8 @@ class AiApiKeyController extends BaseApiController
 
         $dto = UpdateApiKeyDTO::fromArray($request->validated());
         $apiKey = $this->updateApiKeyAction->execute($apiKey, $dto);
+        $apiKey->update(['user_id' => null]);
+        $apiKey = $apiKey->fresh();
         $apiKey->load('provider');
 
         return $this->success(

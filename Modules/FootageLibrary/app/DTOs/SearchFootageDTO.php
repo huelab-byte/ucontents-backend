@@ -12,6 +12,7 @@ readonly class SearchFootageDTO
         public ?int $folderId = null,
         public ?string $orientation = null, // 'horizontal' or 'vertical'
         public ?float $footageLength = null, // Desired footage length in seconds
+        public ?int $userId = null, // For AI key selection: use this user's keys when set
     ) {}
 
     public static function fromArray(array $data): self
@@ -22,6 +23,7 @@ readonly class SearchFootageDTO
             folderId: $data['folder_id'] ?? null,
             orientation: $data['orientation'] ?? null,
             footageLength: isset($data['footage_length']) ? (float) $data['footage_length'] : null,
+            userId: $data['user_id'] ?? null,
         );
     }
 }

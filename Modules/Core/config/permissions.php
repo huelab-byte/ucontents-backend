@@ -108,6 +108,7 @@ return [
 
     // Social Connection
     'manage_social_connection_providers' => 'Manage SocialConnection provider apps (OAuth credentials, scopes, enable/disable)',
+    'manage_social_connection_groups' => 'Manage connection groups and move connections to groups (customer)',
 
     // Notifications
     'view_notification_settings' => 'View notification settings (Pusher, realtime)',

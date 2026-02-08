@@ -44,10 +44,14 @@ class TestApiKeyAction
             // Build configuration for the adapter
             $config = $this->buildConfig($apiKey, $provider);
 
-            // Make a simple test call - use a minimal prompt
+            // Make a simple test call - use a minimal prompt. For Azure, use key's deployment name if set.
+            $deploymentName = $apiKey->metadata['deployment_name'] ?? null;
+            $testModel = ($provider->slug === 'azure_openai' && $deploymentName !== null && $deploymentName !== '')
+                ? $deploymentName
+                : $this->getDefaultModel($provider);
             $dto = new \Modules\AiIntegration\DTOs\AiModelCallDTO(
                 providerSlug: $provider->slug,
-                model: $this->getDefaultModel($provider),
+                model: $testModel,
                 prompt: 'Say "OK" in one word.',
                 apiKeyId: $apiKey->id,
                 settings: [

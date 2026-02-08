@@ -179,8 +179,9 @@ return [
         'azure_openai' => [
             'name' => 'Azure OpenAI',
             'models' => ['gpt-4o', 'gpt-4-turbo', 'gpt-4', 'gpt-35-turbo'],
-            'vision_models' => ['gpt-4o', 'gpt-4-turbo'],
+            'vision_models' => ['gpt-4o', 'gpt-4-turbo'], // Vision capability (image input) same as OpenAI
             'base_url' => null, // Custom endpoint per API key
+            'api_version' => '2024-02-15-preview', // Azure OpenAI REST API version
         ],
         'anthropic' => [
             'name' => 'Anthropic (Claude)',

@@ -17,8 +17,11 @@ class UploadFileAction
         ?int $userId = null,
         $reference = null
     ): StorageFile {
+        // Uses active storage (StorageManagement): StorageDriverFactory::make() with no args
+        // resolves the active storage setting. All final file uploads (e.g. MediaUpload,
+        // libraries) go to the currently active storage provider.
         $driver = StorageDriverFactory::make();
-        
+
         // Path is treated as directory - each driver handles filename generation
         // If no path provided, use date-based directory structure
         $directory = $path ? rtrim($path, '/') : date('Y/m/d');

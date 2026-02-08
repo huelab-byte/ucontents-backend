@@ -40,7 +40,7 @@ sudo ./scripts/vps-setup.sh
 
 ### `deploy-backend.sh`
 
-Deploy/update the app. Run from repo root:
+Deploy/update the app. Run from repo root. **Installs and starts queue workers (3 instances) and scheduler automatically** — no manual systemd steps.
 
 ```bash
 cd /var/www/ucontents-backend
@@ -50,7 +50,8 @@ cd /var/www/ucontents-backend
 
 ## Deployment configs
 
-- **Nginx:** `deployment/nginx-app.ucontents.com.conf` → copy to `/etc/nginx/sites-available/`
-- **Queue worker:** `deployment/laravel-queue-worker.service` → copy to `/etc/systemd/system/`
+- **Nginx:** `deployment/nginx-app.ucontents.com.conf` → copy to `/etc/nginx/sites-available/` (deploy script updates upload limits in-place if the site exists)
+- **Queue workers:** `deployment/laravel-queue-worker@.service` — deploy-backend.sh copies it and enables instances 1–3
+- **Scheduler:** `deployment/laravel-scheduler.service` — deploy-backend.sh copies and enables it
 
 See `docs/DEPLOYMENT.md` in the repo for the full flow.

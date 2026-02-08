@@ -50,6 +50,16 @@ Route::prefix('v1')->group(function () {
                 ->name('customer.media-upload.caption-templates.delete')
                 ->middleware('permission:manage_caption_templates');
 
+            Route::post('media-upload/init-chunk-upload', [MediaUploadController::class, 'initChunkUpload'])
+                ->name('customer.media-upload.init-chunk-upload')
+                ->middleware('permission:upload_media');
+            Route::post('media-upload/upload-chunk', [MediaUploadController::class, 'uploadChunk'])
+                ->name('customer.media-upload.upload-chunk')
+                ->middleware('permission:upload_media');
+            Route::post('media-upload/finish-chunk-upload', [MediaUploadController::class, 'finishChunkUpload'])
+                ->name('customer.media-upload.finish-chunk-upload')
+                ->middleware('permission:upload_media');
+
             Route::post('media-upload/bulk-upload', [MediaUploadController::class, 'bulkUpload'])
                 ->name('customer.media-upload.bulk-upload')
                 ->middleware('permission:upload_media');

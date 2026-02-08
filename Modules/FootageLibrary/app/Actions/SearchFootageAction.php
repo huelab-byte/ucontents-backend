@@ -43,12 +43,13 @@ class SearchFootageAction
             // Search with higher limit to ensure diversity
             $limit = min($requiredCount * 2, config('footagelibrary.module.search.max_results', 1000));
             
-            // Perform vector search
+            // Perform vector search (pass userId so customer's API key is used when configured)
             $results = $this->vectorSearchService->search(
                 $dto->searchText,
                 $filters,
                 $limit,
-                config('footagelibrary.module.search.min_similarity', 0.5)
+                config('footagelibrary.module.search.min_similarity', 0.5),
+                $dto->userId
             );
 
             // Limit to required count

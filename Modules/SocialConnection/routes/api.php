@@ -61,16 +61,21 @@ Route::prefix('v1')->group(function () {
             Route::delete('/channels/{channel}/force', [SocialConnectionController::class, 'destroy'])
                 ->name('customer.social-connection.channels.destroy');
             Route::patch('/channels/group', [SocialConnectionController::class, 'bulkAssignGroup'])
+                ->middleware('permission:manage_social_connection_groups')
                 ->name('customer.social-connection.channels.bulk-assign-group');
             
             // Groups
             Route::get('/groups', [SocialConnectionController::class, 'indexGroups'])
+                ->middleware('permission:manage_social_connection_groups')
                 ->name('customer.social-connection.groups.index');
             Route::post('/groups', [SocialConnectionController::class, 'storeGroup'])
+                ->middleware('permission:manage_social_connection_groups')
                 ->name('customer.social-connection.groups.store');
             Route::patch('/groups/{group}', [SocialConnectionController::class, 'updateGroup'])
+                ->middleware('permission:manage_social_connection_groups')
                 ->name('customer.social-connection.groups.update');
             Route::delete('/groups/{group}', [SocialConnectionController::class, 'destroyGroup'])
+                ->middleware('permission:manage_social_connection_groups')
                 ->name('customer.social-connection.groups.destroy');
         });
 });

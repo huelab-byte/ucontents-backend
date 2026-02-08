@@ -35,5 +35,13 @@ class SocialConnectionChannelPolicy
     {
         return $channel->user_id === $user->id;
     }
+
+    /**
+     * Allow bulk operations (e.g. move to group). Ownership is verified per-channel in the action.
+     */
+    public function updateAny(User $user): bool
+    {
+        return true;
+    }
 }
 

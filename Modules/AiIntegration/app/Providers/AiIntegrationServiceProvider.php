@@ -84,6 +84,7 @@ class AiIntegrationServiceProvider extends ServiceProvider
             \Modules\AiIntegration\Console\Commands\SyncSuperAdminPermissions::class,
             \Modules\AiIntegration\Console\Commands\CheckSuperAdminRole::class,
             \Modules\AiIntegration\Console\Commands\SeedAiIntegrationPermissions::class,
+            \Modules\AiIntegration\Console\Commands\TestApiKeyCommand::class,
         ]);
     }
 

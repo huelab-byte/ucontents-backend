@@ -80,38 +80,44 @@ git pull origin "$GIT_BRANCH"
 cd "$APP_DIR"
 
 # Install/update Composer dependencies
-echo -e "${GREEN}[4/12] Installing Composer dependencies...${NC}"
+echo -e "${GREEN}[4/14] Installing Composer dependencies...${NC}"
 composer install --no-dev --optimize-autoloader --no-interaction
 
 # Regenerate autoloader for new modules (CRITICAL for new modules to be recognized)
-echo -e "${GREEN}[5/12] Regenerating autoloader for modules...${NC}"
+echo -e "${GREEN}[5/14] Regenerating autoloader for modules...${NC}"
 composer dump-autoload --optimize --no-interaction 2>&1 | grep -v "does not comply with psr-4" || true
 
 # Clear module cache and rediscover modules
-echo -e "${GREEN}[6/12] Clearing and rediscovering modules...${NC}"
+echo -e "${GREEN}[6/14] Clearing and rediscovering modules...${NC}"
 php artisan module:clear 2>/dev/null || true
 php artisan package:discover --ansi
 
 # Install/update NPM dependencies (if needed)
 if [ -f package.json ]; then
-    echo -e "${GREEN}[7/12] Installing NPM dependencies...${NC}"
+    echo -e "${GREEN}[7/14] Installing NPM dependencies...${NC}"
     npm ci --production 2>/dev/null || npm install --production 2>/dev/null || echo -e "${YELLOW}NPM install skipped${NC}"
 fi
 
 # Run database migrations (safe, won't lose data)
-echo -e "${GREEN}[8/12] Running database migrations...${NC}"
+echo -e "${GREEN}[8/15] Running database migrations...${NC}"
 php artisan migrate --force
 
 # Run database seeders (safe - uses firstOrCreate/updateOrCreate)
-echo -e "${GREEN}[9/12] Running database seeders...${NC}"
+echo -e "${GREEN}[9/15] Running database seeders...${NC}"
 # Run seeders (all seeders use firstOrCreate/updateOrCreate - safe for repeated runs)
 # Note: PSR-4 warnings from modules are harmless - Laravel Modules handles loading
 php artisan db:seed --force || {
     echo -e "${YELLOW}Warning: Seeder execution had issues. Check logs. Continuing deployment...${NC}"
 }
 
+# Destroy all user sessions so users must log in again (picks up new permissions)
+echo -e "${GREEN}[10/15] Destroying user sessions (force re-login)...${NC}"
+php artisan sessions:destroy || {
+    echo -e "${YELLOW}Warning: sessions:destroy had issues. Continuing deployment...${NC}"
+}
+
 # Clear and cache configuration
-echo -e "${GREEN}[10/12] Optimizing application...${NC}"
+echo -e "${GREEN}[11/15] Optimizing application...${NC}"
 php artisan config:clear
 php artisan cache:clear
 php artisan route:clear
@@ -139,7 +145,7 @@ chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
 # Apply system configurations (PHP & Nginx)
-echo -e "${GREEN}[11/13] Applying system configuration updates...${NC}"
+echo -e "${GREEN}[12/15] Applying system configuration updates...${NC}"
 
 # Update PHP limits
 if [ -f "$APP_DIR/deployment/php8.2-fpm-upload-limits.ini" ]; then
@@ -179,14 +185,52 @@ elif [ -f "$APP_DIR/deployment/nginx-app.ucontents.com.conf" ]; then
     systemctl reload nginx 2>/dev/null || sudo systemctl reload nginx 2>/dev/null || echo -e "${YELLOW}Warning: Could not reload Nginx.${NC}"
 fi
 
-# Restart queue workers (graceful restart)
-echo -e "${GREEN}[12/13] Restarting queue workers...${NC}"
-php artisan queue:restart
-systemctl restart laravel-queue-worker 2>/dev/null || sudo systemctl restart laravel-queue-worker 2>/dev/null || echo -e "${YELLOW}Queue worker service not found or not running${NC}"
+# Install or update queue worker and scheduler systemd units (so nothing is manual)
+echo -e "${GREEN}[13/15] Ensuring queue workers and scheduler are installed...${NC}"
+DEPLOYMENT_DIR="$APP_DIR/deployment"
+if [ -f "$DEPLOYMENT_DIR/laravel-queue-worker@.service" ]; then
+    cp "$DEPLOYMENT_DIR/laravel-queue-worker@.service" /etc/systemd/system/ 2>/dev/null || sudo cp "$DEPLOYMENT_DIR/laravel-queue-worker@.service" /etc/systemd/system/ 2>/dev/null || true
+fi
+if [ -f "$DEPLOYMENT_DIR/laravel-queue-worker.service" ]; then
+    cp "$DEPLOYMENT_DIR/laravel-queue-worker.service" /etc/systemd/system/ 2>/dev/null || sudo cp "$DEPLOYMENT_DIR/laravel-queue-worker.service" /etc/systemd/system/ 2>/dev/null || true
+fi
+if [ -f "$DEPLOYMENT_DIR/laravel-scheduler.service" ]; then
+    cp "$DEPLOYMENT_DIR/laravel-scheduler.service" /etc/systemd/system/ 2>/dev/null || sudo cp "$DEPLOYMENT_DIR/laravel-scheduler.service" /etc/systemd/system/ 2>/dev/null || true
+fi
+systemctl daemon-reload 2>/dev/null || sudo systemctl daemon-reload 2>/dev/null || true
+# Enable multi-worker instances (3 workers for parallel uploads) if template was copied; otherwise enable single worker
+if [ -f /etc/systemd/system/laravel-queue-worker@.service ]; then
+    for i in 1 2 3; do
+        systemctl enable "laravel-queue-worker@$i" 2>/dev/null || sudo systemctl enable "laravel-queue-worker@$i" 2>/dev/null || true
+    done
+else
+    systemctl enable laravel-queue-worker 2>/dev/null || sudo systemctl enable laravel-queue-worker 2>/dev/null || true
+fi
+systemctl enable laravel-scheduler 2>/dev/null || sudo systemctl enable laravel-scheduler 2>/dev/null || true
+# Start services (start is idempotent); use multi-worker or single worker, not both
+if [ -f /etc/systemd/system/laravel-queue-worker@.service ]; then
+    for i in 1 2 3; do
+        systemctl start "laravel-queue-worker@$i" 2>/dev/null || sudo systemctl start "laravel-queue-worker@$i" 2>/dev/null || true
+    done
+else
+    systemctl start laravel-queue-worker 2>/dev/null || sudo systemctl start laravel-queue-worker 2>/dev/null || true
+fi
+systemctl start laravel-scheduler 2>/dev/null || sudo systemctl start laravel-scheduler 2>/dev/null || true
 
-# Restart scheduler (for scheduled tasks like bulk-posting:process-schedule)
-echo -e "${GREEN}[13/13] Restarting Laravel scheduler...${NC}"
-systemctl restart laravel-scheduler 2>/dev/null || sudo systemctl restart laravel-scheduler 2>/dev/null || echo -e "${YELLOW}Scheduler service not found or not running. Install with: sudo cp deployment/laravel-scheduler.service /etc/systemd/system/ && sudo systemctl enable laravel-scheduler && sudo systemctl start laravel-scheduler${NC}"
+# Restart queue workers (graceful restart so they pick up new code)
+echo -e "${GREEN}[14/15] Restarting queue workers...${NC}"
+php artisan queue:restart
+if [ -f /etc/systemd/system/laravel-queue-worker@.service ]; then
+    for i in 1 2 3; do
+        systemctl restart "laravel-queue-worker@$i" 2>/dev/null || sudo systemctl restart "laravel-queue-worker@$i" 2>/dev/null || true
+    done
+else
+    systemctl restart laravel-queue-worker 2>/dev/null || sudo systemctl restart laravel-queue-worker 2>/dev/null || echo -e "${YELLOW}Queue worker service not found${NC}"
+fi
+
+# Restart scheduler
+echo -e "${GREEN}[15/15] Restarting Laravel scheduler...${NC}"
+systemctl restart laravel-scheduler 2>/dev/null || sudo systemctl restart laravel-scheduler 2>/dev/null || echo -e "${YELLOW}Scheduler service not found or not running${NC}"
 
 # Disable maintenance mode
 echo -e "${GREEN}Disabling maintenance mode...${NC}"
@@ -206,7 +250,8 @@ fi
 echo ""
 echo -e "${YELLOW}Next steps:${NC}"
 echo "  1. Check application logs: tail -f storage/logs/laravel.log"
-echo "  2. Verify queue workers: systemctl status laravel-queue-worker"
+echo "  2. Verify queue workers: systemctl status laravel-queue-worker@1 laravel-queue-worker@2 laravel-queue-worker@3"
+echo "     (or: systemctl status laravel-queue-worker if using single worker)"
 echo "  3. Verify scheduler: systemctl status laravel-scheduler"
 echo "  4. Test API endpoints"
 echo ""

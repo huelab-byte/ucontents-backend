@@ -458,7 +458,7 @@ class SocialConnectionController extends BaseApiController
         BulkAssignGroupRequest $request,
         BulkAssignGroupAction $action
     ): JsonResponse {
-        $this->authorize('update', SocialConnectionChannel::class);
+        $this->authorize('updateAny', SocialConnectionChannel::class);
 
         if (!Schema::hasTable('social_connection_channels') || !Schema::hasTable('social_connection_groups')) {
             return $this->error(

@@ -56,6 +56,9 @@ class DatabaseSeeder extends Seeder
         // Seed GeneralSettings module
         $this->call(\Modules\GeneralSettings\Database\Seeders\GeneralSettingsDatabaseSeeder::class);
 
+        // Seed SocialConnection module (providers + groups permissions)
+        $this->call(\Modules\SocialConnection\Database\Seeders\SocialConnectionDatabaseSeeder::class);
+
         // Assign default "browse shared library/overlay" permissions to customer role
         $this->syncCustomerLibraryPermissions();
 

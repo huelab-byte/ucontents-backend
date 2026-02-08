@@ -9,6 +9,7 @@ use Modules\AiIntegration\DTOs\CreateApiKeyDTO;
 use Modules\AiIntegration\DTOs\UpdateApiKeyDTO;
 use Modules\AiIntegration\Models\AiApiKey;
 use Modules\AiIntegration\Models\AiProvider;
+use Modules\UserManagement\Models\User;
 
 /**
  * Service for managing AI API keys
@@ -89,16 +90,20 @@ class AiApiKeyService
 
     /**
      * Get best available API key for a provider filtered by scope.
-     * 
+     *
+     * When a customer has configured their own API key (user_id set on the key), that key
+     * is always used for their requests. Admin/system keys (user_id = null) are used only
+     * when the user has no key for that provider or as fallback.
+     *
      * Prioritization:
-     * 1. User-specific keys (if userId provided)
-     * 2. Preferred Key ID (if matching user or system)
-     * 3. System keys (fallback)
-     * 
+     * 1. Customer keys first: if userId is provided, use that user's keys (user_id = userId).
+     * 2. Preferred Key ID (if specified and in the candidate set).
+     * 3. System keys: only if no suitable customer key found (admin-configured keys, user_id = null).
+     *
      * @param string $providerSlug Provider slug
      * @param string|null $scope The scope to filter by (e.g., 'vision_content', 'embedding')
      * @param int|null $preferredKeyId Preferred API key ID (if specified)
-     * @param int|null $userId User ID to find personal keys for
+     * @param int|null $userId User ID for the request; when set, their keys are preferred over system keys
      * @return AiApiKey|null
      */
     public function getBestApiKeyForScope(string $providerSlug, ?string $scope = null, ?int $preferredKeyId = null, ?int $userId = null): ?AiApiKey
@@ -133,26 +138,44 @@ class AiApiKeyService
             }
         }
 
-        // --- STRATEGY 2: Fallback to SYSTEM keys ---
+        // --- STRATEGY 2: Fallback to SYSTEM keys (user_id = null, i.e. admin-configured shared keys) ---
         $systemKeys = (clone $baseQuery)
             ->whereNull('user_id')
             ->orderBy('priority', 'desc')
             ->get();
 
-        if ($systemKeys->isEmpty()) {
-            Log::debug('No active system API keys found for provider', ['provider_slug' => $providerSlug]);
-            return null;
-        }
-
         $bestSystemKey = $this->findBestKeyFromCollection($systemKeys, $scope, $preferredKeyId);
-        
         if ($bestSystemKey) {
             Log::debug('Using system API key', ['key_id' => $bestSystemKey->id, 'scope' => $scope]);
-        } else {
-            Log::warning('No suitable system API key found for scope', ['provider' => $providerSlug, 'scope' => $scope]);
+            return $bestSystemKey;
         }
-        
-        return $bestSystemKey;
+
+        // --- STRATEGY 3: Fallback to keys owned by users with manage_ai_api_keys (admin panel keys created before user_id was forced to null) ---
+        $adminUserIds = $this->getUserIdsWithManageAiApiKeys();
+        if ($adminUserIds !== []) {
+            $adminKeys = (clone $baseQuery)
+                ->whereIn('user_id', $adminUserIds)
+                ->orderBy('priority', 'desc')
+                ->get();
+            $bestAdminKey = $this->findBestKeyFromCollection($adminKeys, $scope, $preferredKeyId);
+            if ($bestAdminKey) {
+                Log::debug('Using admin-owned API key as fallback', ['key_id' => $bestAdminKey->id, 'scope' => $scope]);
+                return $bestAdminKey;
+            }
+        }
+
+        Log::debug('No active system API keys found for provider', ['provider_slug' => $providerSlug]);
+        return null;
+    }
+
+    /**
+     * User IDs that have manage_ai_api_keys (so their keys can be used as system fallback for customers).
+     */
+    private function getUserIdsWithManageAiApiKeys(): array
+    {
+        return User::whereHas('roles.permissions', function ($query) {
+            $query->where('slug', 'manage_ai_api_keys');
+        })->pluck('id')->toArray();
     }
 
     /**

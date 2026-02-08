@@ -26,27 +26,13 @@ class GenerateInVideoCaptionAction
      */
     public function executeFromText(string $context, int $wordsPerCaption, ?int $userId = null): string
     {
-        $primaryProvider = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.ai_provider', config('mediaupload.module.content_generation.ai_provider', 'openai'));
-        $primaryModel = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.text_model', config('mediaupload.module.content_generation.text_model', 'gpt-4o'));
         $cfg = config('mediaupload.module.content_generation', []);
-
-        // Build list of providers to try: Primary + Fallbacks
-        $attempts = [['provider' => $primaryProvider, 'model' => $primaryModel]];
-
-        if (!empty($cfg['text_fallbacks'])) {
-            foreach ($cfg['text_fallbacks'] as $fallback) {
-                // Avoid duplicates
-                $exists = false;
-                foreach ($attempts as $a) {
-                    if ($a['provider'] === $fallback['provider'] && $a['model'] === $fallback['model']) {
-                        $exists = true;
-                        break;
-                    }
-                }
-                if (!$exists) {
-                    $attempts[] = $fallback;
-                }
-            }
+        // Use only fallback list: first provider with an active key (in AI Integration) wins.
+        $attempts = $cfg['text_fallbacks'] ?? [];
+        if (empty($attempts)) {
+            throw new \RuntimeException(
+                'No AI providers configured for in-video caption (text). Add text_fallbacks in config and active API keys in AI Integration.'
+            );
         }
 
         $prompt = $this->buildTextPrompt($context, $wordsPerCaption);
@@ -89,27 +75,13 @@ class GenerateInVideoCaptionAction
      */
     public function executeFromFrames(string $mergedFramePath, string $title, int $wordsPerCaption, ?int $userId = null): string
     {
-        $primaryProvider = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.ai_provider', config('mediaupload.module.content_generation.ai_provider', 'openai'));
-        $primaryModel = \Modules\GeneralSettings\Models\GeneralSetting::get('mediaupload.vision_model', config('mediaupload.module.content_generation.vision_model', 'gpt-4o'));
         $cfg = config('mediaupload.module.content_generation', []);
-
-        // Build list of providers to try: Primary + Fallbacks
-        $attempts = [['provider' => $primaryProvider, 'model' => $primaryModel]];
-
-        if (!empty($cfg['vision_fallbacks'])) {
-            foreach ($cfg['vision_fallbacks'] as $fallback) {
-                // Avoid duplicates
-                $exists = false;
-                foreach ($attempts as $a) {
-                    if ($a['provider'] === $fallback['provider'] && $a['model'] === $fallback['model']) {
-                        $exists = true;
-                        break;
-                    }
-                }
-                if (!$exists) {
-                    $attempts[] = $fallback;
-                }
-            }
+        // Use only fallback list: first provider with an active key (in AI Integration) wins.
+        $attempts = $cfg['vision_fallbacks'] ?? [];
+        if (empty($attempts)) {
+            throw new \RuntimeException(
+                'No AI providers configured for in-video caption (vision). Add vision_fallbacks in config and active API keys in AI Integration.'
+            );
         }
 
         $prompt = $this->buildVisionPrompt($title, $wordsPerCaption);
