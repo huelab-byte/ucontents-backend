@@ -42,8 +42,9 @@ class BulkUploadAction
                     'status' => 'pending',
                 ]);
 
-                // Dispatch immediately so file enters processing queue as soon as it is stored
-                \Modules\MediaUpload\Jobs\ProcessMediaUploadJob::dispatch($queueItem->id);
+                // Initial status is 'pending'. The DispatchMediaUploadsCommand will pick this up
+                // and dispatch it fairly to avoid one user blocking the queue.
+                // \Modules\MediaUpload\Jobs\ProcessMediaUploadJob::dispatch($queueItem->id);
 
                 $queuedItems[] = $queueItem;
             } catch (\Exception $e) {

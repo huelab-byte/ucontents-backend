@@ -33,7 +33,10 @@ class ProcessMediaUploadJob implements ShouldQueue
     public function __construct(
         public int $queueId
     ) {
-        $this->queue = config('mediaupload.module.upload.queue_name', 'default');
+        // If queue is not set via dispatch()->onQueue(), use config default
+        if (!isset($this->queue)) {
+            $this->queue = config('mediaupload.queue_name', 'media_uploads');
+        }
     }
 
     public function handle(

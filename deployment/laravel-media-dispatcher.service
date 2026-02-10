@@ -1,0 +1,23 @@
+[Unit]
+Description=Laravel Media Upload Dispatcher
+After=network.target redis-server.service mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/ucontents-backend
+ExecStart=/usr/bin/php /var/www/ucontents-backend/artisan media:dispatch-uploads --daemon
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Resource limits
+LimitNOFILE=65535
+
+# Environment
+Environment="APP_ENV=production"
+
+[Install]
+WantedBy=multi-user.target

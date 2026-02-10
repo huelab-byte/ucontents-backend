@@ -183,8 +183,9 @@ class MediaUploadController extends BaseApiController
             'status' => 'pending',
         ]);
 
-        // Dispatch immediately so file enters processing queue as soon as it is assembled
-        \Modules\MediaUpload\Jobs\ProcessMediaUploadJob::dispatch($queueItem->id);
+        // Initial status is 'pending'. The DispatchMediaUploadsCommand will pick this up
+        // and dispatch it fairly to avoid one user blocking the queue.
+        // \Modules\MediaUpload\Jobs\ProcessMediaUploadJob::dispatch($queueItem->id);
 
         // Cleanup chunks
         $disk->deleteDirectory("temp/chunks/{$uuid}");

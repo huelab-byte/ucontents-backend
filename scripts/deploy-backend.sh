@@ -188,17 +188,24 @@ fi
 # Install or update queue worker and scheduler systemd units (so nothing is manual)
 echo -e "${GREEN}[13/15] Ensuring queue workers and scheduler are installed...${NC}"
 DEPLOYMENT_DIR="$APP_DIR/deployment"
-if [ -f "$DEPLOYMENT_DIR/laravel-queue-worker@.service" ]; then
-    cp "$DEPLOYMENT_DIR/laravel-queue-worker@.service" /etc/systemd/system/ 2>/dev/null || sudo cp "$DEPLOYMENT_DIR/laravel-queue-worker@.service" /etc/systemd/system/ 2>/dev/null || true
-fi
-if [ -f "$DEPLOYMENT_DIR/laravel-queue-worker.service" ]; then
-    cp "$DEPLOYMENT_DIR/laravel-queue-worker.service" /etc/systemd/system/ 2>/dev/null || sudo cp "$DEPLOYMENT_DIR/laravel-queue-worker.service" /etc/systemd/system/ 2>/dev/null || true
-fi
-if [ -f "$DEPLOYMENT_DIR/laravel-scheduler.service" ]; then
-    cp "$DEPLOYMENT_DIR/laravel-scheduler.service" /etc/systemd/system/ 2>/dev/null || sudo cp "$DEPLOYMENT_DIR/laravel-scheduler.service" /etc/systemd/system/ 2>/dev/null || true
-fi
+
+# Helper function to install service
+install_service() {
+    local service_file="$1"
+    if [ -f "$DEPLOYMENT_DIR/$service_file" ]; then
+        cp "$DEPLOYMENT_DIR/$service_file" /etc/systemd/system/ 2>/dev/null || sudo cp "$DEPLOYMENT_DIR/$service_file" /etc/systemd/system/ 2>/dev/null || true
+    fi
+}
+
+install_service "laravel-queue-worker@.service"
+install_service "laravel-queue-worker.service"
+install_service "laravel-scheduler.service"
+install_service "laravel-media-dispatcher.service"
+install_service "laravel-media-worker@.service"
+
 systemctl daemon-reload 2>/dev/null || sudo systemctl daemon-reload 2>/dev/null || true
-# Enable multi-worker instances (3 workers for parallel uploads) if template was copied; otherwise enable single worker
+
+# Enable general workers
 if [ -f /etc/systemd/system/laravel-queue-worker@.service ]; then
     for i in 1 2 3; do
         systemctl enable "laravel-queue-worker@$i" 2>/dev/null || sudo systemctl enable "laravel-queue-worker@$i" 2>/dev/null || true
@@ -206,8 +213,18 @@ if [ -f /etc/systemd/system/laravel-queue-worker@.service ]; then
 else
     systemctl enable laravel-queue-worker 2>/dev/null || sudo systemctl enable laravel-queue-worker 2>/dev/null || true
 fi
+
+# Enable media workers (running 4 dedicated workers for media)
+if [ -f /etc/systemd/system/laravel-media-worker@.service ]; then
+    for i in 1 2 3 4; do
+        systemctl enable "laravel-media-worker@$i" 2>/dev/null || sudo systemctl enable "laravel-media-worker@$i" 2>/dev/null || true
+    done
+fi
+
 systemctl enable laravel-scheduler 2>/dev/null || sudo systemctl enable laravel-scheduler 2>/dev/null || true
-# Start services (start is idempotent); use multi-worker or single worker, not both
+systemctl enable laravel-media-dispatcher 2>/dev/null || sudo systemctl enable laravel-media-dispatcher 2>/dev/null || true
+
+# Start services
 if [ -f /etc/systemd/system/laravel-queue-worker@.service ]; then
     for i in 1 2 3; do
         systemctl start "laravel-queue-worker@$i" 2>/dev/null || sudo systemctl start "laravel-queue-worker@$i" 2>/dev/null || true
@@ -215,11 +232,20 @@ if [ -f /etc/systemd/system/laravel-queue-worker@.service ]; then
 else
     systemctl start laravel-queue-worker 2>/dev/null || sudo systemctl start laravel-queue-worker 2>/dev/null || true
 fi
+
+if [ -f /etc/systemd/system/laravel-media-worker@.service ]; then
+    for i in 1 2 3 4; do
+        systemctl start "laravel-media-worker@$i" 2>/dev/null || sudo systemctl start "laravel-media-worker@$i" 2>/dev/null || true
+    done
+fi
+
 systemctl start laravel-scheduler 2>/dev/null || sudo systemctl start laravel-scheduler 2>/dev/null || true
+systemctl start laravel-media-dispatcher 2>/dev/null || sudo systemctl start laravel-media-dispatcher 2>/dev/null || true
 
 # Restart queue workers (graceful restart so they pick up new code)
 echo -e "${GREEN}[14/15] Restarting queue workers...${NC}"
-php artisan queue:restart
+php artisan queue:restart || true
+
 if [ -f /etc/systemd/system/laravel-queue-worker@.service ]; then
     for i in 1 2 3; do
         systemctl restart "laravel-queue-worker@$i" 2>/dev/null || sudo systemctl restart "laravel-queue-worker@$i" 2>/dev/null || true
@@ -227,6 +253,16 @@ if [ -f /etc/systemd/system/laravel-queue-worker@.service ]; then
 else
     systemctl restart laravel-queue-worker 2>/dev/null || sudo systemctl restart laravel-queue-worker 2>/dev/null || echo -e "${YELLOW}Queue worker service not found${NC}"
 fi
+
+# Restart media workers
+if [ -f /etc/systemd/system/laravel-media-worker@.service ]; then
+    for i in 1 2 3 4; do
+        systemctl restart "laravel-media-worker@$i" 2>/dev/null || sudo systemctl restart "laravel-media-worker@$i" 2>/dev/null || echo -e "${YELLOW}Media worker service not found${NC}"
+    done
+fi
+
+# Restart media dispatcher
+systemctl restart laravel-media-dispatcher 2>/dev/null || sudo systemctl restart laravel-media-dispatcher 2>/dev/null || echo -e "${YELLOW}Media dispatcher service not found${NC}"
 
 # Restart scheduler
 echo -e "${GREEN}[15/15] Restarting Laravel scheduler...${NC}"
