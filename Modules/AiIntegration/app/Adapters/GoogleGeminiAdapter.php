@@ -19,21 +19,30 @@ class GoogleGeminiAdapter implements ProviderAdapterInterface
     public function callModel(AiApiKey $apiKey, AiModelCallDTO $dto): array
     {
         $client = new Client($apiKey->getDecryptedApiKey());
-        
+
+        if ($apiKey->endpoint_url) {
+            $client = $client->withBaseUrl($apiKey->endpoint_url);
+        }
+
+        // Force v1beta version as newer models often require it
+        $client = $client->withV1BetaVersion();
+
         $settings = array_merge([
             'temperature' => 0.7,
             'maxOutputTokens' => 1000,
         ], $dto->settings ?? []);
 
-        $model = $client->generativeModel($dto->model);
-        
+        // Use model from API key metadata if configured, otherwise fallback to request model
+        $modelName = $apiKey->metadata['model'] ?? $dto->model;
+        $model = $client->generativeModel($modelName);
+
         // Build content parts - support vision with images
         $parts = $this->buildContentParts($dto);
-        
+
         $response = $model->generateContent(...$parts);
 
         $content = $response->text() ?? '';
-        
+
         // Note: Token usage might not be available in all SDK versions
         $usageMetadata = $response->usageMetadata ?? null;
 
@@ -42,7 +51,7 @@ class GoogleGeminiAdapter implements ProviderAdapterInterface
             'prompt_tokens' => $usageMetadata->promptTokenCount ?? 0,
             'completion_tokens' => $usageMetadata->candidatesTokenCount ?? 0,
             'total_tokens' => $usageMetadata->totalTokenCount ?? 0,
-            'model' => $dto->model,
+            'model' => $modelName,
         ];
     }
 
@@ -52,11 +61,11 @@ class GoogleGeminiAdapter implements ProviderAdapterInterface
     private function buildContentParts(AiModelCallDTO $dto): array
     {
         $parts = [];
-        
+
         // Check if there's an image in metadata
         $image = $dto->metadata['image'] ?? null;
         $imageFormat = $dto->metadata['image_format'] ?? 'base64';
-        
+
         if ($image && $imageFormat === 'base64') {
             // Add image part first
             $parts[] = new ImagePart(
@@ -64,10 +73,10 @@ class GoogleGeminiAdapter implements ProviderAdapterInterface
                 $image
             );
         }
-        
+
         // Add text part
         $parts[] = new TextPart($dto->prompt);
-        
+
         return $parts;
     }
 }

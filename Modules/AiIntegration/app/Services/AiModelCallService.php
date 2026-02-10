@@ -30,7 +30,7 @@ class AiModelCallService
 
         // Get API key
         $apiKey = $this->getApiKey($dto, $userId);
-        
+
         if (!$apiKey) {
             throw new \Exception("No available API key for provider: {$dto->providerSlug}");
         }
@@ -40,7 +40,7 @@ class AiModelCallService
         try {
             // Get adapter for the provider
             $adapter = $this->adapterFactory->create($provider);
-            
+
             // Call the model using the provider's SDK
             $response = $adapter->callModel($apiKey, $dto);
 
@@ -56,7 +56,7 @@ class AiModelCallService
 
         } catch (\Exception $e) {
             $responseTime = (int) ((microtime(true) - $startTime) * 1000);
-            
+
             // Log error
             $this->logUsage(
                 $apiKey,
@@ -107,7 +107,7 @@ class AiModelCallService
             'api_key_id' => $apiKey->id,
             'user_id' => $userId,
             'provider_slug' => $dto->providerSlug,
-            'model' => $dto->model,
+            'model' => $response['model'] ?? $dto->model,
             'prompt' => $dto->prompt,
             'response' => $response['content'] ?? null,
             'prompt_tokens' => $response['prompt_tokens'] ?? 0,

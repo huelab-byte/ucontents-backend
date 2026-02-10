@@ -30,7 +30,7 @@ class TestApiKeyAction
 
         try {
             $provider = $apiKey->provider;
-            
+
             if (!$provider) {
                 return [
                     'success' => false,
@@ -63,7 +63,51 @@ class TestApiKeyAction
                 ]
             );
 
-            $result = $adapter->callModel($apiKey, $dto);
+            try {
+                $result = $adapter->callModel($apiKey, $dto);
+            } catch (\Exception $e) {
+                // Special handling for Google Gemini: if 1.5-flash is not found, try gemini-pro
+                if (
+                    $provider->slug === 'google' &&
+                    $testModel === 'gemini-1.5-flash' &&
+                    (str_contains($e->getMessage(), 'not found') || str_contains($e->getMessage(), '404'))
+                ) {
+
+                    $fallbackModel = 'gemini-pro';
+                    $dto = new \Modules\AiIntegration\DTOs\AiModelCallDTO(
+                        providerSlug: $provider->slug,
+                        model: $fallbackModel,
+                        prompt: 'Say "OK" in one word.',
+                        apiKeyId: $apiKey->id,
+                        settings: [
+                            'max_tokens' => 10,
+                            'temperature' => 0,
+                        ],
+                        metadata: [
+                            'is_test' => true
+                        ]
+                    );
+
+                    try {
+                        $result = $adapter->callModel($apiKey, $dto);
+                        $result['model'] = $fallbackModel;
+                    } catch (\Exception $fallbackError) {
+                        // Fallback also failed. Use the original error or a combined one.
+                        // If it's a 404, we can say models unavailable. If it's a 400 (API_KEY_INVALID), say that.
+
+                        $msg = $e->getMessage();
+
+                        // If the first error was about API key validity, just re-throw that.
+                        if (str_contains($msg, 'API key not valid') || str_contains($msg, 'API_KEY_INVALID')) {
+                            throw $e;
+                        }
+
+                        throw new \Exception("Google Gemini models are unavailable. Tried 'gemini-1.5-flash' and 'gemini-pro'. Original error: " . $msg);
+                    }
+                } else {
+                    throw $e;
+                }
+            }
 
             $responseTimeMs = (int) ((microtime(true) - $startTime) * 1000);
 
@@ -84,7 +128,7 @@ class TestApiKeyAction
             ];
         } catch (\Exception $e) {
             $responseTimeMs = (int) ((microtime(true) - $startTime) * 1000);
-            
+
             Log::warning('API key test failed', [
                 'api_key_id' => $apiKey->id,
                 'provider' => $apiKey->provider?->slug,
@@ -92,7 +136,7 @@ class TestApiKeyAction
             ]);
 
             // Parse common error messages for better UX
-            $errorMessage = $this->parseErrorMessage($e->getMessage());
+            $errorMessage = $this->parseErrorMessage($e->getMessage(), $apiKey);
 
             return [
                 'success' => false,
@@ -154,7 +198,7 @@ class TestApiKeyAction
     /**
      * Parse error messages for better UX
      */
-    private function parseErrorMessage(string $message): string
+    private function parseErrorMessage(string $message, AiApiKey $apiKey): string
     {
         // Common API key errors
         if (str_contains($message, 'Incorrect API key') || str_contains($message, 'invalid_api_key')) {
@@ -171,6 +215,11 @@ class TestApiKeyAction
 
         if (str_contains($message, 'permission') || str_contains($message, '403')) {
             return 'Permission denied. The API key may not have access to the requested resource.';
+        }
+
+        // Check for specific model 404 errors
+        if ((str_contains($message, 'model') || str_contains($message, 'Model')) && (str_contains($message, 'not found') || str_contains($message, '404'))) {
+            return 'Model not found. The selected model ' . ($this->getDefaultModel($apiKey->provider) ?? '') . ' may not be available for your API key or region.';
         }
 
         if (str_contains($message, 'not found') || str_contains($message, '404')) {
